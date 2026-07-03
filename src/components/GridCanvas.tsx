@@ -222,14 +222,10 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
             <g clipPath="url(#grid-clip)">
               {/* 1. School Catchment Polygons (Translucent solid tints, naturally blending at overlaps) */}
               {schools.map((school) => {
-                const pointsStr = school.polygon
-                  .map((p) => `${p.x},${100 - p.y}`)
-                  .join(' ');
-                  
                 return (
-                  <polygon
+                  <path
                     key={`poly-${school.id}`}
-                    points={pointsStr}
+                    d={school.pathD || `M ${school.polygon.map(p => `${p.x},${100 - p.y}`).join(' L ')} Z`}
                     fill={school.color}
                     fillOpacity={0.15}
                     stroke={school.color}
@@ -238,6 +234,39 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                   />
                 );
               })}
+
+              {/* 2. Interactive Selection Route Lines (Narrow Muted Links) */}
+              {(() => {
+                const activeSchoolId = (hoveredPoint && 'polygon' in hoveredPoint)
+                  ? hoveredPoint.id
+                  : (filterType.startsWith('school-') ? filterType : null);
+
+                if (!activeSchoolId) return null;
+                const activeSchool = schools.find((s) => s.id === activeSchoolId);
+                if (!activeSchool) return null;
+
+                return centers.map((center) => {
+                  const studentCount = households.filter(
+                    (h) => h.settlementId === center.id && h.assignedSchoolId === activeSchoolId
+                  ).length;
+
+                  if (studentCount === 0) return null;
+
+                  return (
+                    <line
+                      key={`route-${activeSchool.id}-${center.id}`}
+                      x1={activeSchool.x}
+                      y1={100 - activeSchool.y}
+                      x2={center.x}
+                      y2={100 - center.y}
+                      stroke="#475569"
+                      strokeWidth="1"
+                      opacity="0.6"
+                      className="transition-all duration-300"
+                    />
+                  );
+                });
+              })()}
             </g>
           </svg>
 

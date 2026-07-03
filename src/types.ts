@@ -29,6 +29,7 @@ export interface School {
   color: string; // Hex color code
   polygon: { x: number; y: number }[]; // Ordered vertices of the irregular catchment area
   weight?: number; // Boundary weight for Voronoi cells
+  pathD?: string; // Cubic Bezier path command for rendering
 }
 
 export interface ScenarioParams {

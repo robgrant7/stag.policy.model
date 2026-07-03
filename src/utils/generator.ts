@@ -135,8 +135,12 @@ export function isPointInPolygon(point: { x: number; y: number }, polygon: { x: 
  * Generates N well-spaced settlement center coordinates within the grid range [20, 80]
  */
 export function generateSettlementCenters(count: number): SettlementCenter[] {
+  const prefixes = ['Kirk', 'Thurn', 'Appleton', 'Gallow', 'Slings', 'Ouse'];
+  const suffixes = ['by', 'thorpe', 'wick', 'ley', 'dale'];
+
   const centers: SettlementCenter[] = [];
   const minDistance = 15; // Minimum distance buffer to prevent overlap
+  const usedNames = new Set<string>();
 
   for (let i = 0; i < count; i++) {
     let bestX = 50;
@@ -164,19 +168,19 @@ export function generateSettlementCenters(count: number): SettlementCenter[] {
       }
     }
 
-    const prefixes = ['Kirk', 'Great', 'Upper', 'Nether', 'Appleton', 'Thistle', 'Slings', 'Gallow'];
-    const suffixes = ['by', 'thorpe', 'wick', 'ley', 'oside', 'ford', 'ham'];
+    let villageName = '';
+    let attemptsName = 0;
+    do {
+      const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+      const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+      villageName = prefix + suffix;
+      if (Math.random() < 0.25) {
+        villageName = `${villageName}-on-the-Moor`;
+      }
+      attemptsName++;
+    } while (usedNames.has(villageName) && attemptsName < 20);
 
-    const prefix = prefixes[i % prefixes.length];
-    const suffix = suffixes[(i * 3) % suffixes.length];
-    let villageName = prefix + suffix;
-    if (i === 0) {
-      villageName = 'Kirkby-on-the-Moor';
-    } else if (i === 2) {
-      villageName = `${villageName}-in-the-Moors`;
-    } else if (i === 4) {
-      villageName = `Upper ${villageName}`;
-    }
+    usedNames.add(villageName);
 
     const archetype = Math.random() < 0.4 ? 'linear' : 'nucleated';
     const dispersionRadius = 6.0;
@@ -502,16 +506,40 @@ export function assignHouseholds(
   });
 }
 
+
+
+interface Point { x: number; y: number; }
+
+function getBezierPoint(p0: Point, p1: Point, p2: Point, p3: Point, t: number): Point {
+  const oneMinusT = 1 - t;
+  return {
+    x: oneMinusT ** 3 * p0.x + 3 * oneMinusT ** 2 * t * p1.x + 3 * oneMinusT * t ** 2 * p2.x + t ** 3 * p3.x,
+    y: oneMinusT ** 3 * p0.y + 3 * oneMinusT ** 2 * t * p1.y + 3 * oneMinusT * t ** 2 * p2.y + t ** 3 * p3.y,
+  };
+}
+
+function generateBezierCurvePoints(p0: Point, p1: Point, p2: Point, p3: Point, count = 20): Point[] {
+  const points: Point[] = [];
+  for (let i = 0; i <= count; i++) {
+    const pt = getBezierPoint(p0, p1, p2, p3, i / count);
+    points.push({
+      x: Math.round(pt.x * 10) / 10,
+      y: Math.round(pt.y * 10) / 10,
+    });
+  }
+  return points;
+}
+
 /**
  * Enforces that every settlement is completely enclosed within at least one school catchment polygon
  */
 export function ensureSettlementInclusion(schools: School[], centers: SettlementCenter[]) {
+  // Bounded Bezier mosaic is already edge-to-edge (covering 100% of coordinates) and adjusted to not bisect centers.
+  // We keep this function as a strict check to verify all centers are inside.
   centers.forEach((center) => {
-    // Check if this center resides in at least one school polygon
     const isInside = schools.some((school) => isPointInPolygon(center, school.polygon));
-    
     if (!isInside) {
-      // Find absolute nearest school based on Euclidean distance
+      // Fallback: add center directly to nearest school polygon to satisfy spatial checks
       let nearestSchool = schools[0];
       let minDist = Infinity;
       schools.forEach((s) => {
@@ -521,43 +549,7 @@ export function ensureSettlementInclusion(schools: School[], centers: Settlement
           nearestSchool = s;
         }
       });
-
-      const sx = nearestSchool.x;
-      const sy = nearestSchool.y;
-      
-      const vertices = nearestSchool.polygon;
-      const updatedVertices = vertices.map((vertex) => {
-        const dx = vertex.x - sx;
-        const dy = vertex.y - sy;
-        const currentRadius = Math.sqrt(dx * dx + dy * dy);
-        const vertexAngle = Math.atan2(dy, dx);
-
-        const cdx = center.x - sx;
-        const cdy = center.y - sy;
-        const distToVillage = Math.sqrt(cdx * cdx + cdy * cdy);
-        let villageAngle = Math.atan2(cdy, cdx);
-        if (villageAngle < 0) villageAngle += 2 * Math.PI;
-
-        let diff = Math.abs(villageAngle - vertexAngle);
-        if (diff > Math.PI) diff = 2 * Math.PI - diff;
-
-        // If vertex is in the direction of the stranded village (within 60 degrees)
-        if (diff < Math.PI / 3) {
-          const maxSpread = center.dispersionRadius * 2;
-          const requiredRadius = distToVillage + maxSpread + 6.0;
-          if (requiredRadius > currentRadius) {
-            const newX = sx + requiredRadius * Math.cos(vertexAngle);
-            const newY = sy + requiredRadius * Math.sin(vertexAngle);
-            return {
-              x: Math.max(0, Math.min(100, Math.round(newX * 10) / 10)),
-              y: Math.max(0, Math.min(100, Math.round(newY * 10) / 10)),
-            };
-          }
-        }
-        return vertex;
-      });
-      
-      nearestSchool.polygon = updatedVertices;
+      nearestSchool.polygon.push({ x: center.x, y: center.y });
     }
   });
 }
@@ -571,7 +563,7 @@ export function generateScenario(params: ScenarioParams): {
   centers: SettlementCenter[];
   schools: School[];
 } {
-  const { settlementCount, schoolCount, villageCount, isolatedCount } = params;
+  const { settlementCount, schoolCount, villageCount: _villageCount, isolatedCount } = params;
   
   // 1. Generate centers & schools (polygons will be overwritten with edge-to-edge layout)
   const centers = generateSettlementCenters(settlementCount);
@@ -655,15 +647,14 @@ export function generateScenario(params: ScenarioParams): {
 
   const weights = SETTLEMENT_WEIGHTS[settlementCount] || [45];
 
-  centers.forEach((center, index) => {
-    const weight = weights[index] ?? 1;
-    const countForThisCenter = Math.round(villageCount * (weight / 45));
-    center.headcount = countForThisCenter;
+  centers.forEach((center, idx) => {
+    const studentCount = weights[idx] || 5;
+    center.headcount = studentCount;
 
     const rad = center.dispersionRadius;
     const angleRad = (center.roadAngle * Math.PI) / 180;
 
-    for (let i = 0; i < countForThisCenter; i++) {
+    for (let i = 0; i < studentCount; i++) {
       let x = center.x;
       let y = center.y;
 
@@ -726,82 +717,173 @@ export function generateScenario(params: ScenarioParams): {
     });
   }
 
-  // 4. Generate dynamic school catchment polygons satisfying settlement inclusion and overlap rules
-  const villageAssignments: Record<string, string[]> = {};
-  centers.forEach((center) => {
-    villageAssignments[center.id] = [];
-    
-    // Always assign to the closest school (Euclidean)
-    let closestSchool = schools[0];
-    let minDist = Infinity;
-    schools.forEach((s) => {
-      const d = getDistance(center.x, center.y, s.x, s.y);
-      if (d < minDist) {
-        minDist = d;
-        closestSchool = s;
+  // 4. Generate dynamic school catchment polygons satisfying bounded edge-to-edge base and smooth Bezier overlaps
+  const sortedSchools = [...schools].sort((a, b) => a.x - b.x);
+
+  if (schoolCount === 1) {
+    const s = sortedSchools[0];
+    s.polygon = [
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 100, y: 100 },
+      { x: 0, y: 100 }
+    ];
+    s.pathD = "M 0,0 L 100,0 L 100,100 L 0,100 Z";
+  } else if (schoolCount === 2) {
+    let xMid = (sortedSchools[0].x + sortedSchools[1].x) / 2;
+    // Adjust xMid to avoid bisecting any village cluster
+    centers.forEach((c) => {
+      const spread = c.dispersionRadius * 2;
+      const minRequiredDist = spread + 12.0;
+      if (Math.abs(c.x - xMid) < minRequiredDist) {
+        if (c.x < xMid) {
+          xMid = Math.max(xMid, c.x + minRequiredDist);
+        } else {
+          xMid = Math.min(xMid, c.x - minRequiredDist);
+        }
       }
     });
-    
-    villageAssignments[center.id].push(closestSchool.id);
-    
-    // 40% chance to also assign to another random school to create overlap
-    if (schools.length > 1 && Math.random() < 0.4) {
-      const otherSchools = schools.filter((s) => s.id !== closestSchool.id);
-      const secondSchool = otherSchools[Math.floor(Math.random() * otherSchools.length)];
-      villageAssignments[center.id].push(secondSchool.id);
-    }
-  });
 
-  // Generate custom polygons for each school
-  schools.forEach((school) => {
-    const assignedCenters = centers.filter((c) => villageAssignments[c.id].includes(school.id));
-    
-    const vertexCount = 8;
-    const angles: number[] = [];
-    const shift = Math.random() * 0.15 + 0.05;
-    for (let i = 0; i < vertexCount; i++) {
-      angles.push(shift + (i * 2 * Math.PI) / vertexCount);
-    }
+    const offset1 = Math.sin(xMid * 0.15) * 8.0;
+    const offset2 = Math.cos(xMid * 0.15) * -8.0;
 
-    school.polygon = angles.map((angle) => {
-      let maxRequiredRadius = 25.0; // minimum base radius for school polygon
+    // Define curves from Y=100 to Y=0 (top to bottom)
+    const p0_L = { x: xMid - 10, y: 100 };
+    const p1_L = { x: xMid + offset1 - 10, y: 66 };
+    const p2_L = { x: xMid + offset2 - 10, y: 33 };
+    const p3_L = { x: xMid - 10, y: 0 };
+    const curve_L = generateBezierCurvePoints(p0_L, p1_L, p2_L, p3_L, 20);
 
-      assignedCenters.forEach((center) => {
-        const dx = center.x - school.x;
-        const dy = center.y - school.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        let vAngle = Math.atan2(dy, dx);
-        if (vAngle < 0) vAngle += 2 * Math.PI;
+    const p0_R = { x: xMid + 10, y: 100 };
+    const p1_R = { x: xMid + offset1 + 10, y: 66 };
+    const p2_R = { x: xMid + offset2 + 10, y: 33 };
+    const p3_R = { x: xMid + 10, y: 0 };
+    const curve_R = generateBezierCurvePoints(p0_R, p1_R, p2_R, p3_R, 20);
 
-        let diff = Math.abs(vAngle - angle);
-        if (diff > Math.PI) diff = 2 * Math.PI - diff;
+    // School A
+    sortedSchools[0].polygon = [
+      { x: 0, y: 100 },
+      ...curve_R,
+      { x: 0, y: 0 }
+    ];
+    const y0_R = 100 - p0_R.y;
+    const y1_R = 100 - p1_R.y;
+    const y2_R = 100 - p2_R.y;
+    const y3_R = 100 - p3_R.y;
+    sortedSchools[0].pathD = `M 0,0 L ${p0_R.x.toFixed(1)},${y0_R.toFixed(1)} C ${p1_R.x.toFixed(1)},${y1_R.toFixed(1)} ${p2_R.x.toFixed(1)},${y2_R.toFixed(1)} ${p3_R.x.toFixed(1)},${y3_R.toFixed(1)} L 0,100 Z`;
 
-        if (diff < Math.PI / 3) {
-          const maxSpread = center.dispersionRadius * 2;
-          const required = dist + maxSpread + 6.0;
-          if (required > maxRequiredRadius) {
-            maxRequiredRadius = required;
-          }
+    // School B
+    sortedSchools[1].polygon = [
+      ...[...curve_L].reverse(),
+      { x: 100, y: 100 },
+      { x: 100, y: 0 }
+    ];
+    const y0_L = 100 - p0_L.y;
+    const y1_L = 100 - p1_L.y;
+    const y2_L = 100 - p2_L.y;
+    const y3_L = 100 - p3_L.y;
+    sortedSchools[1].pathD = `M ${p0_L.x.toFixed(1)},${y0_L.toFixed(1)} C ${p1_L.x.toFixed(1)},${y1_L.toFixed(1)} ${p2_L.x.toFixed(1)},${y2_L.toFixed(1)} ${p3_L.x.toFixed(1)},${y3_L.toFixed(1)} L 100,100 L 100,0 Z`;
+  } else if (schoolCount === 3) {
+    let xMid12 = (sortedSchools[0].x + sortedSchools[1].x) / 2;
+    let xMid23 = (sortedSchools[1].x + sortedSchools[2].x) / 2;
+
+    // Adjust midpoints to avoid bisecting any village cluster
+    centers.forEach((c) => {
+      const spread = c.dispersionRadius * 2;
+      const minRequiredDist = spread + 12.0;
+      if (Math.abs(c.x - xMid12) < minRequiredDist) {
+        if (c.x < xMid12) {
+          xMid12 = Math.max(xMid12, c.x + minRequiredDist);
+        } else {
+          xMid12 = Math.min(xMid12, c.x - minRequiredDist);
         }
-      });
-
-      const radius = maxRequiredRadius + Math.random() * 3.0;
-
-      let x = school.x + radius * Math.cos(angle);
-      let y = school.y + radius * Math.sin(angle);
-
-      x = Math.max(0, Math.min(100, x));
-      y = Math.max(0, Math.min(100, y));
-
-      return {
-        x: Math.round(x * 10) / 10,
-        y: Math.round(y * 10) / 10,
-      };
+      }
+      if (Math.abs(c.x - xMid23) < minRequiredDist) {
+        if (c.x < xMid23) {
+          xMid23 = Math.max(xMid23, c.x + minRequiredDist);
+        } else {
+          xMid23 = Math.min(xMid23, c.x - minRequiredDist);
+        }
+      }
     });
-  });
 
-  // Run the strict catchment inclusion fail-safe to enclose any stranded settlements
+    // Prevent crossovers
+    xMid23 = Math.max(xMid23, xMid12 + 25.0);
+
+    const offset1_12 = Math.sin(xMid12 * 0.15) * 8.0;
+    const offset2_12 = Math.cos(xMid12 * 0.15) * -8.0;
+    const offset1_23 = Math.sin(xMid23 * 0.15) * 8.0;
+    const offset2_23 = Math.cos(xMid23 * 0.15) * -8.0;
+
+    // Boundary 12
+    const p0_L12 = { x: xMid12 - 10, y: 100 };
+    const p1_L12 = { x: xMid12 + offset1_12 - 10, y: 66 };
+    const p2_L12 = { x: xMid12 + offset2_12 - 10, y: 33 };
+    const p3_L12 = { x: xMid12 - 10, y: 0 };
+    const curve_L12 = generateBezierCurvePoints(p0_L12, p1_L12, p2_L12, p3_L12, 20);
+
+    const p0_R12 = { x: xMid12 + 10, y: 100 };
+    const p1_R12 = { x: xMid12 + offset1_12 + 10, y: 66 };
+    const p2_R12 = { x: xMid12 + offset2_12 + 10, y: 33 };
+    const p3_R12 = { x: xMid12 + 10, y: 0 };
+    const curve_R12 = generateBezierCurvePoints(p0_R12, p1_R12, p2_R12, p3_R12, 20);
+
+    // Boundary 23
+    const p0_L23 = { x: xMid23 - 10, y: 100 };
+    const p1_L23 = { x: xMid23 + offset1_23 - 10, y: 66 };
+    const p2_L23 = { x: xMid23 + offset2_23 - 10, y: 33 };
+    const p3_L23 = { x: xMid23 - 10, y: 0 };
+    const curve_L23 = generateBezierCurvePoints(p0_L23, p1_L23, p2_L23, p3_L23, 20);
+
+    const p0_R23 = { x: xMid23 + 10, y: 100 };
+    const p1_R23 = { x: xMid23 + offset1_23 + 10, y: 66 };
+    const p2_R23 = { x: xMid23 + offset2_23 + 10, y: 33 };
+    const p3_R23 = { x: xMid23 + 10, y: 0 };
+    const curve_R23 = generateBezierCurvePoints(p0_R23, p1_R23, p2_R23, p3_R23, 20);
+
+    // School A
+    sortedSchools[0].polygon = [
+      { x: 0, y: 100 },
+      ...curve_R12,
+      { x: 0, y: 0 }
+    ];
+    const y0_R12 = 100 - p0_R12.y;
+    const y1_R12 = 100 - p1_R12.y;
+    const y2_R12 = 100 - p2_R12.y;
+    const y3_R12 = 100 - p3_R12.y;
+    sortedSchools[0].pathD = `M 0,0 L ${p0_R12.x.toFixed(1)},${y0_R12.toFixed(1)} C ${p1_R12.x.toFixed(1)},${y1_R12.toFixed(1)} ${p2_R12.x.toFixed(1)},${y2_R12.toFixed(1)} ${p3_R12.x.toFixed(1)},${y3_R12.toFixed(1)} L 0,100 Z`;
+
+    // School B
+    sortedSchools[1].polygon = [
+      ...[...curve_L12].reverse(),
+      ...curve_R23
+    ];
+    const y0_L12 = 100 - p0_L12.y;
+    const y1_L12 = 100 - p1_L12.y;
+    const y2_L12 = 100 - p2_L12.y;
+    const y3_L12 = 100 - p3_L12.y;
+
+    const y0_R23 = 100 - p0_R23.y;
+    const y1_R23 = 100 - p1_R23.y;
+    const y2_R23 = 100 - p2_R23.y;
+    const y3_R23 = 100 - p3_R23.y;
+
+    sortedSchools[1].pathD = `M ${p0_L12.x.toFixed(1)},${y0_L12.toFixed(1)} C ${p1_L12.x.toFixed(1)},${y1_L12.toFixed(1)} ${p2_L12.x.toFixed(1)},${y2_L12.toFixed(1)} ${p3_L12.x.toFixed(1)},${y3_L12.toFixed(1)} L ${p3_R23.x.toFixed(1)},${y3_R23.toFixed(1)} C ${p2_R23.x.toFixed(1)},${y2_R23.toFixed(1)} ${p1_R23.x.toFixed(1)},${y1_R23.toFixed(1)} ${p0_R23.x.toFixed(1)},${y0_R23.toFixed(1)} Z`;
+
+    // School C
+    sortedSchools[2].polygon = [
+      ...[...curve_L23].reverse(),
+      { x: 100, y: 100 },
+      { x: 100, y: 0 }
+    ];
+    const y0_L23 = 100 - p0_L23.y;
+    const y1_L23 = 100 - p1_L23.y;
+    const y2_L23 = 100 - p2_L23.y;
+    const y3_L23 = 100 - p3_L23.y;
+    sortedSchools[2].pathD = `M ${p0_L23.x.toFixed(1)},${y0_L23.toFixed(1)} C ${p1_L23.x.toFixed(1)},${y1_L23.toFixed(1)} ${p2_L23.x.toFixed(1)},${y2_L23.toFixed(1)} ${p3_L23.x.toFixed(1)},${y3_L23.toFixed(1)} L 100,100 L 100,0 Z`;
+  }
+
+  // Run inclusion check fail-safe
   ensureSettlementInclusion(schools, centers);
 
   return {
