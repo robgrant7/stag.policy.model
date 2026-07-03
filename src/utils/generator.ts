@@ -17,6 +17,99 @@ function getDistance(x1: number, y1: number, x2: number, y2: number): number {
 }
 
 /**
+ * Calculates cross product of vectors OA and OB
+ * Returns positive if counter-clockwise turn, negative if clockwise, zero if collinear
+ */
+function crossProduct(o: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }): number {
+  return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+}
+
+/**
+ * Computes the Convex Hull of a set of points using Andrew's Monotone Chain algorithm
+ */
+export function getConvexHull(points: { x: number; y: number }[]): { x: number; y: number }[] {
+  if (points.length <= 1) return [...points];
+  
+  // Remove duplicates
+  const uniquePoints = points.filter((p, index, self) =>
+    self.findIndex(t => t.x === p.x && t.y === p.y) === index
+  );
+  
+  if (uniquePoints.length <= 2) {
+    return uniquePoints;
+  }
+
+  // Sort points by x-coordinate, then by y-coordinate
+  uniquePoints.sort((a, b) => (a.x !== b.x ? a.x - b.x : a.y - b.y));
+
+  const lower: { x: number; y: number }[] = [];
+  for (let i = 0; i < uniquePoints.length; i++) {
+    while (
+      lower.length >= 2 &&
+      crossProduct(lower[lower.length - 2], lower[lower.length - 1], uniquePoints[i]) <= 0
+    ) {
+      lower.pop();
+    }
+    lower.push(uniquePoints[i]);
+  }
+
+  const upper: { x: number; y: number }[] = [];
+  for (let i = uniquePoints.length - 1; i >= 0; i--) {
+    while (
+      upper.length >= 2 &&
+      crossProduct(upper[upper.length - 2], upper[upper.length - 1], uniquePoints[i]) <= 0
+    ) {
+      upper.pop();
+    }
+    upper.push(uniquePoints[i]);
+  }
+
+  // Remove the last point of each half because it is repeated
+  lower.pop();
+  upper.pop();
+
+  return lower.concat(upper);
+}
+
+/**
+ * Expands a polygon outward from its centroid by a padding distance
+ */
+export function expandPolygon(vertices: { x: number; y: number }[], padding = 5): { x: number; y: number }[] {
+  if (vertices.length === 0) return [];
+  
+  // Calculate centroid
+  let sumX = 0;
+  let sumY = 0;
+  vertices.forEach(v => {
+    sumX += v.x;
+    sumY += v.y;
+  });
+  const cx = sumX / vertices.length;
+  const cy = sumY / vertices.length;
+  
+  // Move each vertex outward from centroid by padding units
+  return vertices.map(v => {
+    const dx = v.x - cx;
+    const dy = v.y - cy;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    
+    let x = v.x;
+    let y = v.y;
+    
+    if (len > 0) {
+      x = v.x + (dx / len) * padding;
+      y = v.y + (dy / len) * padding;
+    }
+    
+    // Do NOT clamp to 100x100 bounds to prevent cutting off corners of expanded polygons
+    return {
+      x: Math.round(x * 10) / 10,
+      y: Math.round(y * 10) / 10,
+    };
+  });
+}
+
+/**
  * Ray-casting algorithm to check if a coordinate point lies inside a polygon boundary
  */
 export function isPointInPolygon(point: { x: number; y: number }, polygon: { x: number; y: number }[]): boolean {
@@ -290,7 +383,7 @@ export function generateScenario(params: ScenarioParams): {
     });
   }
 
-  // 4. Calculate dynamic polygons for each school based on pre-assigned nearest students
+  // 4. Calculate dynamic polygons for each school based on pre-assigned nearest students using Convex Hull
   schools.forEach((school) => {
     // Find all students whose closest school is this school
     const closestStudents = households.filter((h) => {
@@ -302,14 +395,31 @@ export function generateScenario(params: ScenarioParams): {
       return !isCloserToOther;
     });
 
-    let maxDistance = 30; // default radius fallback
-    if (closestStudents.length > 0) {
-      const distances = closestStudents.map((h) => getDistance(h.x, h.y, school.x, school.y));
-      maxDistance = Math.max(...distances);
+    // Collect coordinates (school center + closest students)
+    const points = [
+      { x: school.x, y: school.y },
+      ...closestStudents.map((h) => ({ x: h.x, y: h.y })),
+    ];
+
+    // Compute the Convex Hull
+    let hull = getConvexHull(points);
+
+    // If hull has fewer than 3 vertices (e.g. only school point or school + 1 student),
+    // generate a small default regular polygon (hexagon) around the school center
+    if (hull.length < 3) {
+      hull = [];
+      const numVertices = 6;
+      for (let i = 0; i < numVertices; i++) {
+        const angle = (i * 2 * Math.PI) / numVertices;
+        hull.push({
+          x: school.x + 5 * Math.cos(angle),
+          y: school.y + 5 * Math.sin(angle),
+        });
+      }
     }
 
-    // Generate the catchment polygon with maxDistance + 5 padding
-    school.polygon = generateCatchmentPolygon(school.x, school.y, maxDistance + 5);
+    // Expand the hull outward by a small padding buffer (e.g. 5 units)
+    school.polygon = expandPolygon(hull, 5);
   });
 
   return {
