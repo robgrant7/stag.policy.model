@@ -178,39 +178,6 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                 );
               })}
 
-              {/* 2. Aggregated Route Trunks (Lines from Settlement Centers to Assigned Schools) */}
-              {centers.map((center) => {
-                const settlementHouseholds = households.filter((h) => h.settlementId === center.id);
-                const routeCounts: Record<string, number> = {};
-                settlementHouseholds.forEach((h) => {
-                  if (h.assignedSchoolId) {
-                    routeCounts[h.assignedSchoolId] = (routeCounts[h.assignedSchoolId] || 0) + 1;
-                  }
-                });
-
-                return Object.entries(routeCounts).map(([schoolId, count]) => {
-                  if (count === 0) return null;
-                  const school = schools.find((s) => s.id === schoolId);
-                  if (!school) return null;
-
-                  const isHovered = hoveredPoint && hoveredPoint.id === center.id;
-
-                  return (
-                    <line
-                      key={`trunk-${center.id}-${schoolId}`}
-                      x1={center.x}
-                      y1={100 - center.y}
-                      x2={school.x}
-                      y2={100 - school.y}
-                      stroke={school.color}
-                      strokeWidth={isHovered ? 1.5 : 1.0}
-                      strokeOpacity={isHovered ? 0.75 : 0.4}
-                      strokeLinecap="round"
-                      className="transition-all duration-300"
-                    />
-                  );
-                });
-              })}
             </g>
           </svg>
 

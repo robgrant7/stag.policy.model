@@ -10,15 +10,6 @@ const CLUSTER_COLORS = [
   '#f97316', // Orange (Settlement F)
 ];
 
-const CLUSTER_NAMES = [
-  'Kirkby-on-the-Moor',
-  'Appleton-le-Moors',
-  'Hutton-le-Hole',
-  'Thornton-le-Dale',
-  'Osmotherley',
-  'Glaisdale'
-];
-
 /**
  * Calculates Euclidean distance between two points
  */
@@ -173,13 +164,27 @@ export function generateSettlementCenters(count: number): SettlementCenter[] {
       }
     }
 
+    const prefixes = ['Kirk', 'Great', 'Upper', 'Nether', 'Appleton', 'Thistle', 'Slings', 'Gallow'];
+    const suffixes = ['by', 'thorpe', 'wick', 'ley', 'oside', 'ford', 'ham'];
+
+    const prefix = prefixes[i % prefixes.length];
+    const suffix = suffixes[(i * 3) % suffixes.length];
+    let villageName = prefix + suffix;
+    if (i === 0) {
+      villageName = 'Kirkby-on-the-Moor';
+    } else if (i === 2) {
+      villageName = `${villageName}-in-the-Moors`;
+    } else if (i === 4) {
+      villageName = `Upper ${villageName}`;
+    }
+
     const archetype = Math.random() < 0.4 ? 'linear' : 'nucleated';
     const dispersionRadius = 6.0;
     const roadAngle = Math.round(Math.random() * 360);
 
     centers.push({
       id: `settlement-${i + 1}`,
-      name: CLUSTER_NAMES[i] || `Settlement ${i + 1}`,
+      name: villageName,
       x: Math.round(bestX * 10) / 10,
       y: Math.round(bestY * 10) / 10,
       color: CLUSTER_COLORS[i] || '#475569',
