@@ -15,7 +15,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
   clusterRadius,
 }) => {
   const [hoveredPoint, setHoveredPoint] = useState<Household | SettlementCenter | School | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'village' | 'isolated' | 'school-a' | 'school-b'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'village' | 'isolated' | 'school-a' | 'school-b' | 'school-c'>('all');
   const [selectedSettlementFilter, setSelectedSettlementFilter] = useState<string | null>(null);
 
   // Filter households based on legend clicks
@@ -24,6 +24,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
     if (filterType === 'village' && h.type !== 'village') return false;
     if (filterType === 'school-a' && h.assignedSchoolId !== 'school-a') return false;
     if (filterType === 'school-b' && h.assignedSchoolId !== 'school-b') return false;
+    if (filterType === 'school-c' && h.assignedSchoolId !== 'school-c') return false;
     if (h.type === 'village' && selectedSettlementFilter && h.settlementId !== selectedSettlementFilter) {
       return false;
     }
@@ -163,7 +164,13 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                 <polygon
                   key={`poly-${school.id}`}
                   points={pointsStr}
-                  fill={school.id === 'school-a' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(239, 68, 68, 0.12)'}
+                  fill={
+                    school.id === 'school-a'
+                      ? 'rgba(59, 130, 246, 0.1)'
+                      : school.id === 'school-b'
+                      ? 'rgba(239, 68, 68, 0.1)'
+                      : 'rgba(234, 179, 8, 0.1)' // Translucent yellow for School Gamma
+                  }
                   stroke={school.color}
                   strokeWidth="0.4"
                   strokeDasharray="2,2"
@@ -404,29 +411,38 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                 <svg className="w-3.5 h-3.5" fill="none" stroke={school.color} viewBox="0 0 24 24" strokeWidth="2.5">
                   <path d="M12 2L2 7l10 5 10-5-10-5z" />
                 </svg>
-                <span>{school.id === 'school-a' ? 'School A' : 'School B'}</span>
+                <span>{school.id === 'school-a' ? 'School A' : school.id === 'school-b' ? 'School B' : 'School C'}</span>
               </button>
             ))}
           </div>
 
           <div className="flex items-center gap-2">
             <span className="text-slate-500 font-semibold uppercase tracking-wider text-[10px]">Zones:</span>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-1.5">
                 <span className="w-4 h-2.5 rounded border border-dashed border-blue-500 bg-blue-500/10 inline-block" />
                 <span className="text-slate-400">Catchment A</span>
               </div>
+              
+              {schools.some(s => s.id === 'school-b') && (
+                <div className="flex items-center gap-1.5">
+                  <span className="w-4 h-2.5 rounded border border-dashed border-red-500 bg-red-500/10 inline-block" />
+                  <span className="text-slate-400">Catchment B</span>
+                </div>
+              )}
+
+              {schools.some(s => s.id === 'school-c') && (
+                <div className="flex items-center gap-1.5">
+                  <span className="w-4 h-2.5 rounded border border-dashed border-yellow-500 bg-yellow-500/10 inline-block" />
+                  <span className="text-slate-400">Catchment C</span>
+                </div>
+              )}
+
               {schools.length > 1 && (
-                <>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-4 h-2.5 rounded border border-dashed border-red-500 bg-red-500/10 inline-block" />
-                    <span className="text-slate-400">Catchment B</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-4 h-2.5 rounded border border-dashed border-purple-500 bg-gradient-to-r from-blue-500/10 to-red-500/10 inline-block" />
-                    <span className="text-slate-300 font-medium">Overlap (Dual) Zone</span>
-                  </div>
-                </>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-4 h-2.5 rounded border border-dashed border-purple-500 bg-purple-550/10 inline-block" />
+                  <span className="text-slate-300 font-medium">Overlap Corridor(s)</span>
+                </div>
               )}
             </div>
           </div>

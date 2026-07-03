@@ -9,9 +9,9 @@ import { generateScenario, assignHouseholds } from './utils/generator';
 function App() {
   // 1. Parameter State
   const [params, setParams] = useState<ScenarioParams>({
-    settlementCount: 2,
-    schoolCount: 2,
-    villageCount: 40,
+    settlementCount: 3,
+    schoolCount: 3,
+    villageCount: 45,
     isolatedCount: 10,
     clusterRadius: 8,
   });

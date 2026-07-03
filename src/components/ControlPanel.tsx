@@ -166,8 +166,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
           Number of Schools
         </label>
-        <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800/80">
-          {[1, 2].map((count) => {
+        <div className="grid grid-cols-3 gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800/80">
+          {[1, 2, 3].map((count) => {
             const isActive = params.schoolCount === count;
             return (
               <button

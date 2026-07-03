@@ -6,7 +6,7 @@ export interface Household {
   y: number; // Coordinate on 0-100 scale
   type: 'village' | 'isolated';
   settlementId?: string; // Links village household to a specific settlement center
-  assignedSchoolId?: 'school-a' | 'school-b'; // Result of active policy assignment
+  assignedSchoolId?: 'school-a' | 'school-b' | 'school-c'; // Result of active policy assignment
 }
 
 export interface SettlementCenter {
@@ -18,7 +18,7 @@ export interface SettlementCenter {
 }
 
 export interface School {
-  id: 'school-a' | 'school-b';
+  id: 'school-a' | 'school-b' | 'school-c';
   name: string;
   x: number; // Coordinate on 0-100 scale
   y: number; // Coordinate on 0-100 scale
@@ -28,7 +28,7 @@ export interface School {
 
 export interface ScenarioParams {
   settlementCount: number; // 1, 2, or 3
-  schoolCount: number;     // 1 or 2
+  schoolCount: number;     // 1, 2, or 3
   villageCount: number;    // default 40
   isolatedCount: number;   // default 10
   clusterRadius: number;   // default 8

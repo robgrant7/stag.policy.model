@@ -228,11 +228,10 @@ export function generateSchools(count: number): School[] {
       name: 'School Alpha',
       x: roundedX,
       y: roundedY,
-      color: '#3b82f6', // Indigo / Blue-500
-      polygon: generateCatchmentPolygon(roundedX, roundedY),
+      color: '#3b82f6', // Blue
+      polygon: [],
     });
-  } else {
-    // 2 schools: School A on Left, School B on Right
+  } else if (count === 2) {
     // School A (X: 15-35, Y: 20-80)
     const ax = 15 + Math.random() * 20;
     const ay = 20 + Math.random() * 60;
@@ -244,8 +243,8 @@ export function generateSchools(count: number): School[] {
       name: 'School Alpha',
       x: roundedAx,
       y: roundedAy,
-      color: '#3b82f6', // Blue-500
-      polygon: generateCatchmentPolygon(roundedAx, roundedAy),
+      color: '#3b82f6', // Blue
+      polygon: [],
     });
 
     // School B (X: 65-85, Y: 20-80)
@@ -259,8 +258,48 @@ export function generateSchools(count: number): School[] {
       name: 'School Beta',
       x: roundedBx,
       y: roundedBy,
-      color: '#ef4444', // Red-500
-      polygon: generateCatchmentPolygon(roundedBx, roundedBy),
+      color: '#ef4444', // Red
+      polygon: [],
+    });
+  } else {
+    // 3 schools
+    // School A (X: 10-25, Y: 20-80)
+    const ax = 10 + Math.random() * 15;
+    const ay = 20 + Math.random() * 60;
+    
+    schools.push({
+      id: 'school-a',
+      name: 'School Alpha',
+      x: Math.round(ax * 10) / 10,
+      y: Math.round(ay * 10) / 10,
+      color: '#3b82f6', // Blue
+      polygon: [],
+    });
+
+    // School B (X: 45-55, Y: 20-80)
+    const bx = 45 + Math.random() * 10;
+    const by = 20 + Math.random() * 60;
+
+    schools.push({
+      id: 'school-b',
+      name: 'School Beta',
+      x: Math.round(bx * 10) / 10,
+      y: Math.round(by * 10) / 10,
+      color: '#ef4444', // Red
+      polygon: [],
+    });
+
+    // School C (X: 75-90, Y: 20-80)
+    const cx = 75 + Math.random() * 15;
+    const cy = 20 + Math.random() * 60;
+
+    schools.push({
+      id: 'school-c',
+      name: 'School Gamma',
+      x: Math.round(cx * 10) / 10,
+      y: Math.round(cy * 10) / 10,
+      color: '#eab308', // Yellow
+      polygon: [],
     });
   }
 
@@ -307,56 +346,59 @@ export function assignHouseholds(
     if (policy === 'nearest' || schools.length === 1) {
       return {
         ...h,
-        assignedSchoolId: closestSchoolId,
+        assignedSchoolId: closestSchoolId as 'school-a' | 'school-b' | 'school-c',
       };
     }
 
     // policy === 'catchment'
-    const schoolA = schools.find((s) => s.id === 'school-a');
-    const schoolB = schools.find((s) => s.id === 'school-b');
+    // Find all schools whose polygon contains the student
+    const matchingSchools = schools.filter((s) => isPointInPolygon(h, s.polygon));
 
-    // Step 1: Run Point-in-Polygon check for both polygons
-    const inA = schoolA ? isPointInPolygon(h, schoolA.polygon) : false;
-    const inB = schoolB ? isPointInPolygon(h, schoolB.polygon) : false;
+    let assignedSchoolId: string;
 
-    let assignedSchoolId: 'school-a' | 'school-b';
+    if (matchingSchools.length === 1) {
+      // Exclusive Zone
+      assignedSchoolId = matchingSchools[0].id;
+    } else if (matchingSchools.length === 2) {
+      // Overlap Corridor (A & B, or B & C)
+      // Sort left-to-right to identify school1 and school2
+      const sortedMatches = [...matchingSchools].sort((a, b) => a.x - b.x);
+      const school1 = sortedMatches[0];
+      const school2 = sortedMatches[1];
 
-    if (inA && !inB) {
-      // Step 2: Inside Polygon A and NOT inside Polygon B (exclusively in A)
-      assignedSchoolId = 'school-a';
-    } else if (inB && !inA) {
-      // Step 3: Inside Polygon B and NOT inside Polygon A (exclusively in B)
-      assignedSchoolId = 'school-b';
-    } else if (inA && inB) {
-      // Step 4: Overlap Zone (inside BOTH) -> Apply overlap allocation rules
       if (overlapRule === 'community') {
         // Feeder Settlement Unity
         if (h.type === 'village' && h.settlementId) {
           const center = centers.find((c) => c.id === h.settlementId);
-          if (center && schoolA && schoolB) {
-            const distToA = getDistance(center.x, center.y, schoolA.x, schoolA.y);
-            const distToB = getDistance(center.x, center.y, schoolB.x, schoolB.y);
-            assignedSchoolId = distToA <= distToB ? 'school-a' : 'school-b';
+          if (center) {
+            const distTo1 = getDistance(center.x, center.y, school1.x, school1.y);
+            const distTo2 = getDistance(center.x, center.y, school2.x, school2.y);
+            assignedSchoolId = distTo1 <= distTo2 ? school1.id : school2.id;
           } else {
-            assignedSchoolId = closestSchoolId;
+            // Outlier fallback inside the two matching schools
+            const distTo1 = getDistance(h.x, h.y, school1.x, school1.y);
+            const distTo2 = getDistance(h.x, h.y, school2.x, school2.y);
+            assignedSchoolId = distTo1 <= distTo2 ? school1.id : school2.id;
           }
         } else {
-          // Outlier in overlap -> physically closer school
-          assignedSchoolId = closestSchoolId;
+          // Outlier fallback inside the two matching schools
+          const distTo1 = getDistance(h.x, h.y, school1.x, school1.y);
+          const distTo2 = getDistance(h.x, h.y, school2.x, school2.y);
+          assignedSchoolId = distTo1 <= distTo2 ? school1.id : school2.id;
         }
       } else {
         // Historical Legacy Split (deterministic probability check)
         const score = getDeterministicScore(h.id);
-        assignedSchoolId = score < legacyPreference ? 'school-a' : 'school-b';
+        assignedSchoolId = score < legacyPreference ? school1.id : school2.id;
       }
     } else {
-      // Step 5: Out of Catchment Fallback (outside BOTH) -> closer school
+      // Fallback for outside all polygons or in 3-way overlap (if any) -> closest school among all active schools
       assignedSchoolId = closestSchoolId;
     }
 
     return {
       ...h,
-      assignedSchoolId,
+      assignedSchoolId: assignedSchoolId as 'school-a' | 'school-b' | 'school-c',
     };
   });
 }
@@ -417,7 +459,7 @@ export function generateScenario(params: ScenarioParams): {
     });
   }
 
-  // 4. Calculate edge-to-edge catchment polygons with a 15-unit overlap corridor
+  // 4. Calculate edge-to-edge catchment polygons
   if (schoolCount === 1) {
     const schoolA = schools.find((s) => s.id === 'school-a');
     if (schoolA) {
@@ -428,7 +470,7 @@ export function generateScenario(params: ScenarioParams): {
         { x: 0, y: 100 },
       ];
     }
-  } else {
+  } else if (schoolCount === 2) {
     const schoolA = schools.find((s) => s.id === 'school-a');
     const schoolB = schools.find((s) => s.id === 'school-b');
     
@@ -450,6 +492,41 @@ export function generateScenario(params: ScenarioParams): {
         { x: 100, y: 0 },
         { x: 100, y: 100 },
         { x: Math.round((xMid - overlapWidth) * 10) / 10, y: 100 },
+      ];
+    }
+  } else {
+    // 3 schools: A, B, C
+    const schoolA = schools.find((s) => s.id === 'school-a');
+    const schoolB = schools.find((s) => s.id === 'school-b');
+    const schoolC = schools.find((s) => s.id === 'school-c');
+    
+    if (schoolA && schoolB && schoolC) {
+      const xMidAB = (schoolA.x + schoolB.x) / 2;
+      const xMidBC = (schoolB.x + schoolC.x) / 2;
+      const overlapWidth = 12;
+      
+      // Polygon A (Left): covers X=0 to X_midAB + overlapWidth
+      schoolA.polygon = [
+        { x: 0, y: 0 },
+        { x: Math.round((xMidAB + overlapWidth) * 10) / 10, y: 0 },
+        { x: Math.round((xMidAB + overlapWidth) * 10) / 10, y: 100 },
+        { x: 0, y: 100 },
+      ];
+      
+      // Polygon B (Center): covers X_midAB - overlapWidth to X_midBC + overlapWidth
+      schoolB.polygon = [
+        { x: Math.round((xMidAB - overlapWidth) * 10) / 10, y: 0 },
+        { x: Math.round((xMidBC + overlapWidth) * 10) / 10, y: 0 },
+        { x: Math.round((xMidBC + overlapWidth) * 10) / 10, y: 100 },
+        { x: Math.round((xMidAB - overlapWidth) * 10) / 10, y: 100 },
+      ];
+      
+      // Polygon C (Right): covers X_midBC - overlapWidth to X=100
+      schoolC.polygon = [
+        { x: Math.round((xMidBC - overlapWidth) * 10) / 10, y: 0 },
+        { x: 100, y: 0 },
+        { x: 100, y: 100 },
+        { x: Math.round((xMidBC - overlapWidth) * 10) / 10, y: 100 },
       ];
     }
   }
