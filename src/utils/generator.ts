@@ -88,18 +88,22 @@ export function generateCatchmentPolygon(cx: number, cy: number): { x: number; y
   const angles: number[] = [];
 
   for (let i = 0; i < vertexCount; i++) {
-    angles.push(Math.random() * 2 * Math.PI);
+    // Uniformly distribute angles with small random variance to prevent self-intersection
+    const baseAngle = (i * 2 * Math.PI) / vertexCount;
+    const sectorWidth = (2 * Math.PI) / vertexCount;
+    const variance = (Math.random() - 0.5) * sectorWidth * 0.5; // up to 25% variance either side
+    angles.push(baseAngle + variance);
   }
   
-  // Sort angles ascending to guarantee a simple, non-self-intersecting shape
+  // Sort angles ascending to ensure a simple, non-self-crossing polygon
   angles.sort((a, b) => a - b);
 
-  return angles.map((theta) => {
+  return angles.map((angle) => {
     // Distance uniformly distributed between 25 and 45 units
-    const r = 25 + Math.random() * 20;
+    const radius = 25 + Math.random() * 20;
     
-    let x = cx + r * Math.cos(theta);
-    let y = cy + r * Math.sin(theta);
+    let x = cx + radius * Math.cos(angle);
+    let y = cy + radius * Math.sin(angle);
     
     // Clamp to 100x100 canvas bounds
     x = Math.max(0, Math.min(100, x));
@@ -190,6 +194,7 @@ export function assignHouseholds(
     distances.sort((a, b) => a.distance - b.distance);
     const closestSchoolId = distances[0].id;
 
+    // Strict Policy check
     if (policy === 'nearest' || schools.length === 1) {
       return {
         ...h,
@@ -201,20 +206,23 @@ export function assignHouseholds(
     const schoolA = schools.find((s) => s.id === 'school-a');
     const schoolB = schools.find((s) => s.id === 'school-b');
 
+    // Step 1: Run Point-in-Polygon check for both polygons
     const inA = schoolA ? isPointInPolygon(h, schoolA.polygon) : false;
     const inB = schoolB ? isPointInPolygon(h, schoolB.polygon) : false;
 
     let assignedSchoolId: 'school-a' | 'school-b';
 
-    if (inA && inB) {
-      // Overlap Zone: defaults to School A (historical preference)
+    if (inA && !inB) {
+      // Step 2: Inside Polygon A and NOT inside Polygon B
       assignedSchoolId = 'school-a';
-    } else if (inA) {
-      assignedSchoolId = 'school-a';
-    } else if (inB) {
+    } else if (inB && !inA) {
+      // Step 3: Inside Polygon B and NOT inside Polygon A
       assignedSchoolId = 'school-b';
+    } else if (inA && inB) {
+      // Step 4: Overlap Zone (inside BOTH) -> default to School A
+      assignedSchoolId = 'school-a';
     } else {
-      // Outside both polygons: fallback to physically closer school
+      // Step 5: Out of Catchment Fallback (outside BOTH) -> closer school
       assignedSchoolId = closestSchoolId;
     }
 
