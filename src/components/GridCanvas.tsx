@@ -103,6 +103,67 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
         </div>
       </div>
 
+      {/* Map Inspector status bar row */}
+      <div className="bg-slate-950/60 border border-slate-800 rounded-lg p-3 min-h-[50px] mb-4 text-xs text-slate-350 backdrop-blur-md shadow-lg flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="text-[10px] text-indigo-400 font-bold tracking-wide uppercase border-r border-slate-800 pr-3">
+            Map Inspector
+          </div>
+          {hoveredPoint ? (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="font-bold text-slate-100">
+                {'polygon' in hoveredPoint
+                  ? hoveredPoint.name
+                  : 'name' in hoveredPoint
+                  ? hoveredPoint.name
+                  : hoveredPoint.id}
+              </span>
+              
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{
+                    backgroundColor:
+                      'polygon' in hoveredPoint
+                        ? hoveredPoint.color
+                        : 'color' in hoveredPoint
+                        ? hoveredPoint.color
+                        : hoveredPoint.type === 'isolated'
+                        ? '#f43f5e'
+                        : centers.find((c) => c.id === hoveredPoint.settlementId)?.color || '#6366f1',
+                  }}
+                />
+                <span className="capitalize text-[10px] text-slate-400">
+                  {'polygon' in hoveredPoint
+                    ? 'School Landmark'
+                    : 'color' in hoveredPoint
+                    ? 'Settlement Center'
+                    : `${hoveredPoint.type} household`}
+                </span>
+              </div>
+
+              {'assignedSchoolId' in hoveredPoint && hoveredPoint.assignedSchoolId && (() => {
+                const s = schools.find((sch) => sch.id === hoveredPoint.assignedSchoolId);
+                return (
+                  <div className="text-[10px] text-slate-400">
+                    Assigned: <span className="font-bold" style={{ color: s ? s.color : '#94a3b8' }}>{s ? s.name : hoveredPoint.assignedSchoolId}</span>
+                  </div>
+                );
+              })()}
+            </div>
+          ) : (
+            <div className="text-slate-500 italic text-[10px]">
+              Hover over pins or dots to inspect...
+            </div>
+          )}
+        </div>
+        {hoveredPoint && (
+          <div className="font-mono text-indigo-300 text-[10px] bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+            X: {hoveredPoint.x.toFixed(1)} | Y: {hoveredPoint.y.toFixed(1)}
+          </div>
+        )}
+      </div>
+
       {/* Grid Canvas Wrapper */}
       <div className="flex-1 w-full flex items-center justify-center p-6 md:p-8 select-none">
         
@@ -308,70 +369,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
           })}
         </div>
 
-        {/* Floating Tooltip / Details Box (Top Left corner of Grid Panel) */}
-        <div className="absolute top-3 left-3 bg-slate-900/90 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-300 backdrop-blur-md shadow-lg pointer-events-none min-w-[150px] z-40">
-          <div className="text-[10px] text-indigo-400 font-semibold tracking-wide uppercase">
-            Map Inspector
-          </div>
-          {hoveredPoint ? (
-            <div className="mt-1 space-y-1">
-              <div className="font-bold text-slate-100">
-                {'polygon' in hoveredPoint
-                  ? hoveredPoint.name
-                  : 'name' in hoveredPoint
-                  ? hoveredPoint.name
-                  : hoveredPoint.id}
-              </div>
-              
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{
-                    backgroundColor:
-                      'polygon' in hoveredPoint
-                        ? hoveredPoint.color
-                        : 'color' in hoveredPoint
-                        ? hoveredPoint.color
-                        : hoveredPoint.type === 'isolated'
-                        ? '#f43f5e'
-                        : centers.find((c) => c.id === hoveredPoint.settlementId)?.color || '#6366f1',
-                  }}
-                />
-                <span className="capitalize text-[10px]">
-                  {'polygon' in hoveredPoint
-                    ? 'School Landmark'
-                    : 'color' in hoveredPoint
-                    ? 'Settlement Center'
-                    : `${hoveredPoint.type} household`}
-                </span>
-              </div>
 
-              {/* Assignment details for students */}
-              {'assignedSchoolId' in hoveredPoint && hoveredPoint.assignedSchoolId && (() => {
-                const s = schools.find((sch) => sch.id === hoveredPoint.assignedSchoolId);
-                return (
-                  <div className="text-[10px] text-slate-400">
-                    Assigned to:{' '}
-                    <span
-                      className="font-bold"
-                      style={{ color: s ? s.color : '#94a3b8' }}
-                    >
-                      {s ? s.name : hoveredPoint.assignedSchoolId}
-                    </span>
-                  </div>
-                );
-              })()}
-
-              <div className="font-mono text-indigo-300 text-[10px] mt-0.5">
-                X: {hoveredPoint.x.toFixed(1)} | Y: {hoveredPoint.y.toFixed(1)}
-              </div>
-            </div>
-          ) : (
-            <div className="mt-1 text-slate-500 italic text-[10px]">
-              Hover over pins or dots to inspect...
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Map Legend (Bottom detailed description) */}

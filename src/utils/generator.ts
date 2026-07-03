@@ -342,24 +342,13 @@ export function getExclusiveSchoolId(px: number, schools: School[]): string {
   }
 }
 
-export function getEligibleSchoolsForCell(x: number, schools: School[]): string[] {
-  if (schools.length === 0) return [];
-  if (schools.length === 1) return [schools[0].id];
-  
-  const sorted = [...schools].sort((a, b) => a.x - b.x);
+export function getEligibleSchoolsForPoint(point: { x: number; y: number }, schools: School[]): string[] {
   const eligible: string[] = [];
-  
-  if (sorted.length === 2) {
-    const xMid = (sorted[0].x + sorted[1].x) / 2;
-    if (x < xMid + 10) eligible.push(sorted[0].id);
-    if (x >= xMid - 10) eligible.push(sorted[1].id);
-  } else {
-    const xMid12 = (sorted[0].x + sorted[1].x) / 2;
-    const xMid23 = (sorted[1].x + sorted[2].x) / 2;
-    if (x < xMid12 + 10) eligible.push(sorted[0].id);
-    if (x >= xMid12 - 10 && x < xMid23 + 10) eligible.push(sorted[1].id);
-    if (x >= xMid23 - 10) eligible.push(sorted[2].id);
-  }
+  schools.forEach((school) => {
+    if (isPointInPolygon(point, school.polygon)) {
+      eligible.push(school.id);
+    }
+  });
   return eligible;
 }
 
@@ -408,50 +397,54 @@ export function assignHouseholds(
     }
 
     // policy === 'catchment'
-    // Determine the parish grid cell for the student
-    const col = Math.max(0, Math.min(9, Math.floor(h.x / 10)));
-    const cellX = col * 10 + 5;
-    const eligible = getEligibleSchoolsForCell(cellX, sortedSchools);
+    // Determine which school polygons contain the student point
+    const eligible = getEligibleSchoolsForPoint(h, sortedSchools);
 
     let assignedSchoolId: string;
 
     if (eligible.length === 0) {
+      // Outlier fallback: assign to closest school
       assignedSchoolId = closestSchoolId;
     } else if (eligible.length === 1) {
+      // Exclusive catchment allocation: 100% to this single school, bypassing any preference checks
       assignedSchoolId = eligible[0];
     } else {
-      // Shared / Overlap cell
+      // Overlap Zone (shared by 2 or more schools)
       if (overlapRule === 'community') {
         if (h.type === 'village' && h.settlementId) {
           const center = centers.find((c) => c.id === h.settlementId);
           if (center) {
-            // Village-to-Parish Anchoring: Home Parish
-            const centerCol = Math.max(0, Math.min(9, Math.floor(center.x / 10)));
-            const centerCellX = centerCol * 10 + 5;
-            const homeEligible = getEligibleSchoolsForCell(centerCellX, sortedSchools);
+            // Find eligible schools for the village center point
+            const centerEligible = getEligibleSchoolsForPoint(center, sortedSchools);
             
-            const activeEligible = homeEligible.length > 0 ? homeEligible : eligible;
-
-            if (activeEligible.length === 1) {
-              assignedSchoolId = activeEligible[0];
+            // If the village center resides in only one school polygon, they all route exclusively to it
+            if (centerEligible.length === 1) {
+              assignedSchoolId = centerEligible[0];
             } else {
-              // Unified community routing based on utility split at the center
-              const utilities = activeEligible.map((schoolId) => {
-                const s = sortedSchools.find((sch) => sch.id === schoolId)!;
-                const dist = getDistance(center.x, center.y, s.x, s.y);
-                const distTerm = dist > 0.1 ? 1.0 / dist : 10.0;
-                const attr = attractiveness[schoolId] ?? 0.0;
-                const utility = distTerm * (1.0 + attr);
-                return { id: schoolId, utility };
-              });
-              utilities.sort((a, b) => b.utility - a.utility);
-              assignedSchoolId = utilities[0].id;
+              // Village center is in an overlap zone or outside (fallback to student eligibility)
+              const activeEligible = centerEligible.length > 0 ? centerEligible : eligible;
+              
+              if (activeEligible.length === 1) {
+                assignedSchoolId = activeEligible[0];
+              } else {
+                // Unified community routing based on utility split at the center
+                const utilities = activeEligible.map((schoolId) => {
+                  const s = sortedSchools.find((sch) => sch.id === schoolId)!;
+                  const dist = getDistance(center.x, center.y, s.x, s.y);
+                  const distTerm = dist > 0.1 ? 1.0 / dist : 10.0;
+                  const attr = attractiveness[schoolId] ?? 0.0;
+                  const utility = distTerm * (1.0 + attr);
+                  return { id: schoolId, utility };
+                });
+                utilities.sort((a, b) => b.utility - a.utility);
+                assignedSchoolId = utilities[0].id;
+              }
             }
           } else {
             assignedSchoolId = closestSchoolId;
           }
         } else {
-          // isolated student: check eligibility
+          // isolated student: check utility at student coordinate
           const utilities = eligible.map((schoolId) => {
             const s = sortedSchools.find((sch) => sch.id === schoolId)!;
             const dist = getDistance(h.x, h.y, s.x, s.y);
@@ -506,6 +499,66 @@ export function assignHouseholds(
       ...h,
       assignedSchoolId: assignedSchoolId as any,
     };
+  });
+}
+
+/**
+ * Enforces that every settlement is completely enclosed within at least one school catchment polygon
+ */
+export function ensureSettlementInclusion(schools: School[], centers: SettlementCenter[]) {
+  centers.forEach((center) => {
+    // Check if this center resides in at least one school polygon
+    const isInside = schools.some((school) => isPointInPolygon(center, school.polygon));
+    
+    if (!isInside) {
+      // Find absolute nearest school based on Euclidean distance
+      let nearestSchool = schools[0];
+      let minDist = Infinity;
+      schools.forEach((s) => {
+        const d = getDistance(center.x, center.y, s.x, s.y);
+        if (d < minDist) {
+          minDist = d;
+          nearestSchool = s;
+        }
+      });
+
+      const sx = nearestSchool.x;
+      const sy = nearestSchool.y;
+      
+      const vertices = nearestSchool.polygon;
+      const updatedVertices = vertices.map((vertex) => {
+        const dx = vertex.x - sx;
+        const dy = vertex.y - sy;
+        const currentRadius = Math.sqrt(dx * dx + dy * dy);
+        const vertexAngle = Math.atan2(dy, dx);
+
+        const cdx = center.x - sx;
+        const cdy = center.y - sy;
+        const distToVillage = Math.sqrt(cdx * cdx + cdy * cdy);
+        let villageAngle = Math.atan2(cdy, cdx);
+        if (villageAngle < 0) villageAngle += 2 * Math.PI;
+
+        let diff = Math.abs(villageAngle - vertexAngle);
+        if (diff > Math.PI) diff = 2 * Math.PI - diff;
+
+        // If vertex is in the direction of the stranded village (within 60 degrees)
+        if (diff < Math.PI / 3) {
+          const maxSpread = center.dispersionRadius * 2;
+          const requiredRadius = distToVillage + maxSpread + 6.0;
+          if (requiredRadius > currentRadius) {
+            const newX = sx + requiredRadius * Math.cos(vertexAngle);
+            const newY = sy + requiredRadius * Math.sin(vertexAngle);
+            return {
+              x: Math.max(0, Math.min(100, Math.round(newX * 10) / 10)),
+              y: Math.max(0, Math.min(100, Math.round(newY * 10) / 10)),
+            };
+          }
+        }
+        return vertex;
+      });
+      
+      nearestSchool.polygon = updatedVertices;
+    }
   });
 }
 
@@ -747,6 +800,9 @@ export function generateScenario(params: ScenarioParams): {
       };
     });
   });
+
+  // Run the strict catchment inclusion fail-safe to enclose any stranded settlements
+  ensureSettlementInclusion(schools, centers);
 
   return {
     households,
