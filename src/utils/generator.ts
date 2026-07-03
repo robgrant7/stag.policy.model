@@ -268,12 +268,27 @@ export function generateSchools(count: number): School[] {
 }
 
 /**
+ * Helper to compute a stable, deterministic integer between 0 and 99 from a string ID
+ */
+export function getDeterministicScore(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  return Math.abs(hash) % 100;
+}
+
+/**
  * Asserts the transport policy assignment rules on a set of student nodes
  */
 export function assignHouseholds(
   households: Household[],
   schools: School[],
-  policy: TransportPolicy
+  policy: TransportPolicy,
+  overlapRule: 'community' | 'legacy_slider' = 'community',
+  legacyPreference = 70,
+  centers: SettlementCenter[] = []
 ): Household[] {
   return households.map((h) => {
     if (schools.length === 0) return h;
@@ -307,14 +322,33 @@ export function assignHouseholds(
     let assignedSchoolId: 'school-a' | 'school-b';
 
     if (inA && !inB) {
-      // Step 2: Inside Polygon A and NOT inside Polygon B
+      // Step 2: Inside Polygon A and NOT inside Polygon B (exclusively in A)
       assignedSchoolId = 'school-a';
     } else if (inB && !inA) {
-      // Step 3: Inside Polygon B and NOT inside Polygon A
+      // Step 3: Inside Polygon B and NOT inside Polygon A (exclusively in B)
       assignedSchoolId = 'school-b';
     } else if (inA && inB) {
-      // Step 4: Overlap Zone (inside BOTH) -> default to School A
-      assignedSchoolId = 'school-a';
+      // Step 4: Overlap Zone (inside BOTH) -> Apply overlap allocation rules
+      if (overlapRule === 'community') {
+        // Feeder Settlement Unity
+        if (h.type === 'village' && h.settlementId) {
+          const center = centers.find((c) => c.id === h.settlementId);
+          if (center && schoolA && schoolB) {
+            const distToA = getDistance(center.x, center.y, schoolA.x, schoolA.y);
+            const distToB = getDistance(center.x, center.y, schoolB.x, schoolB.y);
+            assignedSchoolId = distToA <= distToB ? 'school-a' : 'school-b';
+          } else {
+            assignedSchoolId = closestSchoolId;
+          }
+        } else {
+          // Outlier in overlap -> physically closer school
+          assignedSchoolId = closestSchoolId;
+        }
+      } else {
+        // Historical Legacy Split (deterministic probability check)
+        const score = getDeterministicScore(h.id);
+        assignedSchoolId = score < legacyPreference ? 'school-a' : 'school-b';
+      }
     } else {
       // Step 5: Out of Catchment Fallback (outside BOTH) -> closer school
       assignedSchoolId = closestSchoolId;
@@ -338,7 +372,7 @@ export function generateScenario(params: ScenarioParams): {
 } {
   const { settlementCount, schoolCount, villageCount, isolatedCount, clusterRadius } = params;
   
-  // 1. Generate centers & schools (polygons will be overwritten dynamically)
+  // 1. Generate centers & schools (polygons will be overwritten with edge-to-edge layout)
   const centers = generateSettlementCenters(settlementCount);
   const schools = generateSchools(schoolCount);
   const households: Household[] = [];
@@ -383,44 +417,42 @@ export function generateScenario(params: ScenarioParams): {
     });
   }
 
-  // 4. Calculate dynamic polygons for each school based on pre-assigned nearest students using Convex Hull
-  schools.forEach((school) => {
-    // Find all students whose closest school is this school
-    const closestStudents = households.filter((h) => {
-      const distToThis = getDistance(h.x, h.y, school.x, school.y);
-      const isCloserToOther = schools.some((other) => {
-        if (other.id === school.id) return false;
-        return getDistance(h.x, h.y, other.x, other.y) < distToThis;
-      });
-      return !isCloserToOther;
-    });
-
-    // Collect coordinates (school center + closest students)
-    const points = [
-      { x: school.x, y: school.y },
-      ...closestStudents.map((h) => ({ x: h.x, y: h.y })),
-    ];
-
-    // Compute the Convex Hull
-    let hull = getConvexHull(points);
-
-    // If hull has fewer than 3 vertices (e.g. only school point or school + 1 student),
-    // generate a small default regular polygon (hexagon) around the school center
-    if (hull.length < 3) {
-      hull = [];
-      const numVertices = 6;
-      for (let i = 0; i < numVertices; i++) {
-        const angle = (i * 2 * Math.PI) / numVertices;
-        hull.push({
-          x: school.x + 5 * Math.cos(angle),
-          y: school.y + 5 * Math.sin(angle),
-        });
-      }
+  // 4. Calculate edge-to-edge catchment polygons with a 15-unit overlap corridor
+  if (schoolCount === 1) {
+    const schoolA = schools.find((s) => s.id === 'school-a');
+    if (schoolA) {
+      schoolA.polygon = [
+        { x: 0, y: 0 },
+        { x: 100, y: 0 },
+        { x: 100, y: 100 },
+        { x: 0, y: 100 },
+      ];
     }
-
-    // Expand the hull outward by a small padding buffer (e.g. 5 units)
-    school.polygon = expandPolygon(hull, 5);
-  });
+  } else {
+    const schoolA = schools.find((s) => s.id === 'school-a');
+    const schoolB = schools.find((s) => s.id === 'school-b');
+    
+    if (schoolA && schoolB) {
+      const xMid = (schoolA.x + schoolB.x) / 2;
+      const overlapWidth = 15;
+      
+      // School A Catchment Polygon: covers X=0 to X_mid + overlapWidth
+      schoolA.polygon = [
+        { x: 0, y: 0 },
+        { x: Math.round((xMid + overlapWidth) * 10) / 10, y: 0 },
+        { x: Math.round((xMid + overlapWidth) * 10) / 10, y: 100 },
+        { x: 0, y: 100 },
+      ];
+      
+      // School B Catchment Polygon: covers X_mid - overlapWidth to X=100
+      schoolB.polygon = [
+        { x: Math.round((xMid - overlapWidth) * 10) / 10, y: 0 },
+        { x: 100, y: 0 },
+        { x: 100, y: 100 },
+        { x: Math.round((xMid - overlapWidth) * 10) / 10, y: 100 },
+      ];
+    }
+  }
 
   return {
     households,

@@ -6,6 +6,10 @@ interface ControlPanelProps {
   onChangeParams: (params: ScenarioParams) => void;
   transportPolicy: TransportPolicy;
   onPolicyChange: (policy: TransportPolicy) => void;
+  overlapRule: 'community' | 'legacy_slider';
+  onOverlapRuleChange: (rule: 'community' | 'legacy_slider') => void;
+  legacyPreference: number;
+  onLegacyPreferenceChange: (pref: number) => void;
   onGenerate: () => void;
   onExport: () => void;
 }
@@ -15,6 +19,10 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   onChangeParams,
   transportPolicy,
   onPolicyChange,
+  overlapRule,
+  onOverlapRuleChange,
+  legacyPreference,
+  onLegacyPreferenceChange,
   onGenerate,
   onExport,
 }) => {
@@ -89,6 +97,69 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Overlap Assignment Controls (Only if Catchment policy is active and 2 schools are enabled) */}
+      {transportPolicy === 'catchment' && params.schoolCount > 1 && (
+        <div className="space-y-4 p-4 rounded-xl border border-indigo-950/40 bg-indigo-950/5 animate-fadeIn">
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-indigo-400">
+              Overlap Assignment Rule
+            </label>
+            <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-lg border border-slate-900">
+              <button
+                type="button"
+                onClick={() => onOverlapRuleChange('community')}
+                className={`py-1.5 px-2 rounded text-[10px] font-bold tracking-wide transition-all duration-150 cursor-pointer text-center ${
+                  overlapRule === 'community'
+                    ? 'bg-indigo-650/90 text-white font-bold'
+                    : 'text-slate-455 hover:text-slate-200'
+                }`}
+              >
+                Community Unity
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => onOverlapRuleChange('legacy_slider')}
+                className={`py-1.5 px-2 rounded text-[10px] font-bold tracking-wide transition-all duration-150 cursor-pointer text-center ${
+                  overlapRule === 'legacy_slider'
+                    ? 'bg-indigo-650/90 text-white font-bold'
+                    : 'text-slate-455 hover:text-slate-200'
+                }`}
+              >
+                Legacy Preference
+              </button>
+            </div>
+          </div>
+
+          {overlapRule === 'legacy_slider' && (
+            <div className="space-y-1.5 pt-1 animate-fadeIn">
+              <div className="flex justify-between text-[10px]">
+                <span className="text-slate-450 font-medium">Split (School A vs B)</span>
+                <span className="text-indigo-400 font-bold">{legacyPreference}% / {100 - legacyPreference}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={legacyPreference}
+                onChange={(e) => onLegacyPreferenceChange(parseInt(e.target.value))}
+                className="w-full h-1 bg-slate-950 rounded appearance-none cursor-pointer accent-indigo-500 border border-slate-800"
+              />
+              <p className="text-[9px] text-slate-500 leading-tight">
+                Deterministic random split of student nodes residing in the central overlap corridor.
+              </p>
+            </div>
+          )}
+          
+          {overlapRule === 'community' && (
+            <p className="text-[9px] text-slate-500 leading-tight">
+              * Feeder Settlement Unity: Village student nodes in the overlap corridor are assigned as a single block based on village centroid proximity. Outliers fallback to closest center.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* School Count Picker */}
       <div className="space-y-2">
