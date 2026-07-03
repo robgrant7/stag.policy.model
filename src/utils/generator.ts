@@ -622,23 +622,7 @@ export function generateScenario(params: ScenarioParams): {
     });
   }
 
-  // 4. Calculate organic Weighted Voronoi catchment polygons
-  schools.forEach((school, index) => {
-    let villageSize = 10; // default baseline size
-    if (index < centers.length) {
-      if (settlementCount === 1) {
-        villageSize = villageCount; // 45
-      } else if (settlementCount === 2) {
-        villageSize = index === 0 ? 30 : 15;
-      } else {
-        // 3 settlements
-        villageSize = index === 0 ? 25 : index === 1 ? 13 : 7;
-      }
-    }
-    // Set school boundary weight to villageSize / 2
-    school.weight = Math.round((villageSize / 2) * 10) / 10;
-  });
-
+  // 4. Calculate vertical column catchment polygons
   if (schoolCount === 1) {
     const schoolA = schools.find((s) => s.id === 'school-a');
     if (schoolA) {
@@ -650,53 +634,65 @@ export function generateScenario(params: ScenarioParams): {
       ];
     }
   } else {
-    // Generate Voronoi cells using polar ray casting
-    schools.forEach((school) => {
-      const K = 40;
-      const polygon: { x: number; y: number }[] = [];
-      for (let j = 0; j < K; j++) {
-        const theta = (j * 2 * Math.PI) / K;
-        let low = 0;
-        let high = 150;
-        
-        for (let iter = 0; iter < 12; iter++) {
-          const mid = (low + high) / 2;
-          const px = school.x + mid * Math.cos(theta);
-          const py = school.y + mid * Math.sin(theta);
-          
-          const inside = px >= 0 && px <= 100 && py >= 0 && py <= 100;
-          if (inside) {
-            let bestSchoolId = '';
-            let minDist = Infinity;
-            
-            schools.forEach((s) => {
-              const d = Math.sqrt((px - s.x) ** 2 + (py - s.y) ** 2) - (s.weight || 1.0);
-              if (d < minDist) {
-                minDist = d;
-                bestSchoolId = s.id;
-              }
-            });
-            
-            if (bestSchoolId === school.id) {
-              low = mid;
-            } else {
-              high = mid;
-            }
-          } else {
-            high = mid;
-          }
-        }
-        
-        const finalRadius = low + 8; // expand outward uniformly by +8 coordinate units
-        const finalX = Math.max(0, Math.min(100, school.x + finalRadius * Math.cos(theta)));
-        const finalY = Math.max(0, Math.min(100, school.y + finalRadius * Math.sin(theta)));
-        polygon.push({
-          x: Math.round(finalX * 10) / 10,
-          y: Math.round(finalY * 10) / 10,
-        });
+    // Sort active schools by X
+    const sorted = [...schools].sort((a, b) => a.x - b.x);
+    
+    if (schoolCount === 2) {
+      const xMid = (sorted[0].x + sorted[1].x) / 2;
+      
+      const s0 = schools.find((s) => s.id === sorted[0].id);
+      if (s0) {
+        s0.polygon = [
+          { x: 0, y: 0 },
+          { x: Math.round((xMid + 10) * 10) / 10, y: 0 },
+          { x: Math.round((xMid + 10) * 10) / 10, y: 100 },
+          { x: 0, y: 100 },
+        ];
       }
-      school.polygon = polygon;
-    });
+      
+      const s1 = schools.find((s) => s.id === sorted[1].id);
+      if (s1) {
+        s1.polygon = [
+          { x: Math.round((xMid - 10) * 10) / 10, y: 0 },
+          { x: 100, y: 0 },
+          { x: 100, y: 100 },
+          { x: Math.round((xMid - 10) * 10) / 10, y: 100 },
+        ];
+      }
+    } else if (schoolCount === 3) {
+      const xMid12 = (sorted[0].x + sorted[1].x) / 2;
+      const xMid23 = (sorted[1].x + sorted[2].x) / 2;
+      
+      const s0 = schools.find((s) => s.id === sorted[0].id);
+      if (s0) {
+        s0.polygon = [
+          { x: 0, y: 0 },
+          { x: Math.round((xMid12 + 10) * 10) / 10, y: 0 },
+          { x: Math.round((xMid12 + 10) * 10) / 10, y: 100 },
+          { x: 0, y: 100 },
+        ];
+      }
+      
+      const s1 = schools.find((s) => s.id === sorted[1].id);
+      if (s1) {
+        s1.polygon = [
+          { x: Math.round((xMid12 - 10) * 10) / 10, y: 0 },
+          { x: Math.round((xMid23 + 10) * 10) / 10, y: 0 },
+          { x: Math.round((xMid23 + 10) * 10) / 10, y: 100 },
+          { x: Math.round((xMid12 - 10) * 10) / 10, y: 100 },
+        ];
+      }
+      
+      const s2 = schools.find((s) => s.id === sorted[2].id);
+      if (s2) {
+        s2.polygon = [
+          { x: Math.round((xMid23 - 10) * 10) / 10, y: 0 },
+          { x: 100, y: 0 },
+          { x: 100, y: 100 },
+          { x: Math.round((xMid23 - 10) * 10) / 10, y: 100 },
+        ];
+      }
+    }
   }
 
   return {

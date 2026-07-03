@@ -150,7 +150,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
           <svg
             className="absolute inset-0 w-full h-full pointer-events-none z-10"
             viewBox="0 0 100 100"
-            preserveAspectRatio="none"
+            preserveAspectRatio="xMidYMid meet"
           >
             {/* 1. Catchment Polygons */}
             {schools.map((school) => {
@@ -162,47 +162,13 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                 <polygon
                   key={`poly-${school.id}`}
                   points={pointsStr}
-                  fill={`${school.color}10`}
+                  fill={`${school.color}15`}
                   stroke={school.color}
-                  strokeWidth="0.4"
+                  strokeWidth="0.5"
                   strokeDasharray="2,2"
                   className="transition-all duration-300"
                 />
               );
-            })}
-
-            {/* 1.5. Variable Overlap Border Corridors (glow lines along inner Voronoi edges) */}
-            {schools.map((school) => {
-              const poly = school.polygon;
-              if (!poly || poly.length < 3) return null;
-              
-              return poly.map((A, i) => {
-                const B = poly[(i + 1) % poly.length];
-                const ax = A.x, ay = A.y, bx = B.x, by = B.y;
-                
-                // Determine if segment AB is an inner edge (not on the grid boundary X=0,100 or Y=0,100)
-                const isBoundary = 
-                  (Math.abs(ax) < 0.2 && Math.abs(bx) < 0.2) ||
-                  (Math.abs(ax - 100) < 0.2 && Math.abs(bx - 100) < 0.2) ||
-                  (Math.abs(ay) < 0.2 && Math.abs(by) < 0.2) ||
-                  (Math.abs(ay - 100) < 0.2 && Math.abs(by - 100) < 0.2);
-                  
-                if (isBoundary) return null;
-                
-                return (
-                  <line
-                    key={`overlap-corridor-${school.id}-${i}`}
-                    x1={ax}
-                    y1={100 - ay}
-                    x2={bx}
-                    y2={100 - by}
-                    stroke={school.color}
-                    strokeWidth="16"
-                    strokeOpacity="0.12"
-                    strokeLinecap="round"
-                  />
-                );
-              });
             })}
 
             {/* 2. Visual Vectors (Lines from Students to Assigned Schools) */}
