@@ -20,6 +20,7 @@ function getDistance(x1: number, y1: number, x2: number, y2: number): number {
  * Ray-casting algorithm to check if a coordinate point lies inside a polygon boundary
  */
 export function isPointInPolygon(point: { x: number; y: number }, polygon: { x: number; y: number }[]): boolean {
+  if (!polygon || polygon.length === 0) return false;
   const { x, y } = point;
   let inside = false;
   
@@ -83,7 +84,7 @@ export function generateSettlementCenters(count: number, minDistance = 25): Sett
  * Generates an irregular, simple (non-self-intersecting) polygon around a center point
  * by generating sorted radial angles and random distances between 25 and 45 units.
  */
-export function generateCatchmentPolygon(cx: number, cy: number): { x: number; y: number }[] {
+export function generateCatchmentPolygon(cx: number, cy: number, baseRadius = 35): { x: number; y: number }[] {
   const vertexCount = 6 + Math.floor(Math.random() * 3); // 6 to 8 vertices
   const angles: number[] = [];
 
@@ -99,8 +100,8 @@ export function generateCatchmentPolygon(cx: number, cy: number): { x: number; y
   angles.sort((a, b) => a - b);
 
   return angles.map((angle) => {
-    // Distance uniformly distributed between 25 and 45 units
-    const radius = 25 + Math.random() * 20;
+    // Generate radius with a small variance above baseRadius
+    const radius = baseRadius + Math.random() * 4;
     
     let x = cx + radius * Math.cos(angle);
     let y = cy + radius * Math.sin(angle);
@@ -244,7 +245,7 @@ export function generateScenario(params: ScenarioParams): {
 } {
   const { settlementCount, schoolCount, villageCount, isolatedCount, clusterRadius } = params;
   
-  // 1. Generate centers & schools
+  // 1. Generate centers & schools (polygons will be overwritten dynamically)
   const centers = generateSettlementCenters(settlementCount);
   const schools = generateSchools(schoolCount);
   const households: Household[] = [];
@@ -288,6 +289,28 @@ export function generateScenario(params: ScenarioParams): {
       type: 'isolated',
     });
   }
+
+  // 4. Calculate dynamic polygons for each school based on pre-assigned nearest students
+  schools.forEach((school) => {
+    // Find all students whose closest school is this school
+    const closestStudents = households.filter((h) => {
+      const distToThis = getDistance(h.x, h.y, school.x, school.y);
+      const isCloserToOther = schools.some((other) => {
+        if (other.id === school.id) return false;
+        return getDistance(h.x, h.y, other.x, other.y) < distToThis;
+      });
+      return !isCloserToOther;
+    });
+
+    let maxDistance = 30; // default radius fallback
+    if (closestStudents.length > 0) {
+      const distances = closestStudents.map((h) => getDistance(h.x, h.y, school.x, school.y));
+      maxDistance = Math.max(...distances);
+    }
+
+    // Generate the catchment polygon with maxDistance + 5 padding
+    school.polygon = generateCatchmentPolygon(school.x, school.y, maxDistance + 5);
+  });
 
   return {
     households,
