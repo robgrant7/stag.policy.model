@@ -676,7 +676,7 @@ export function generateScenario(params: ScenarioParams): {
   centers: SettlementCenter[];
   schools: School[];
 } {
-  const { settlementCount, schoolCount, villageCount: _villageCount, isolatedCount } = params;
+  const { settlementCount, schoolCount, villageCount, isolatedCount } = params;
   
   // 1. Generate centers & schools (polygons will be overwritten with edge-to-edge layout)
   const centers = generateSettlementCenters(settlementCount);
@@ -748,20 +748,19 @@ export function generateScenario(params: ScenarioParams): {
 
   const households: Household[] = [];
 
-  // 2. Generate village households clustered around centers
-  const SETTLEMENT_WEIGHTS: Record<number, number[]> = {
-    1: [45],
-    2: [30, 15],
-    3: [25, 13, 7],
-    4: [22, 12, 7, 4],
-    5: [20, 12, 7, 4, 2],
-    6: [18, 11, 7, 5, 3, 1],
-  };
+  // 2. Generate village households clustered around centers dynamically using randomized population weights
+  const randomWeights = Array.from({ length: settlementCount }, () => Math.random() * 8.0 + 2.0);
+  const totalWeight = randomWeights.reduce((sum, w) => sum + w, 0);
 
-  const weights = SETTLEMENT_WEIGHTS[settlementCount] || [45];
-
+  let allocatedStudents = 0;
   centers.forEach((center, idx) => {
-    const studentCount = weights[idx] || 5;
+    let studentCount = 0;
+    if (idx === settlementCount - 1) {
+      studentCount = villageCount - allocatedStudents;
+    } else {
+      studentCount = Math.round(villageCount * (randomWeights[idx] / totalWeight));
+      allocatedStudents += studentCount;
+    }
     center.headcount = studentCount;
 
     const rad = center.dispersionRadius;
@@ -857,24 +856,45 @@ export function generateScenario(params: ScenarioParams): {
       // Step 2: Merge the Voronoi cells of the settlements assigned to the school
       const baseMerged = mergePolygons(baseCells);
       
-      // Step 3: Expand the boundaries of the combined polygon outward from the school center by 15% (1.15)
+      // Step 3: Expand the boundaries of the combined polygon outward from the school center by non-uniform segment-based variation
       const sx = school.x;
       const sy = school.y;
-      const expandedPolygon = baseMerged.map((vertex) => {
+      
+      const rawFactors = baseMerged.map(() => 1.05 + Math.random() * 0.20);
+      const smoothFactors = baseMerged.map((_, idx) => {
+        const prev = rawFactors[(idx - 1 + baseMerged.length) % baseMerged.length];
+        const curr = rawFactors[idx];
+        const next = rawFactors[(idx + 1) % baseMerged.length];
+        return (prev + curr + next) / 3;
+      });
+
+      const expandedPolygon = baseMerged.map((vertex, idx) => {
+        const factor = smoothFactors[idx];
         const dx = vertex.x - sx;
         const dy = vertex.y - sy;
-        const newX = sx + dx * 1.15;
-        const newY = sy + dy * 1.15;
+        const newX = sx + dx * factor;
+        const newY = sy + dy * factor;
         return {
           x: Math.max(0, Math.min(100, Math.round(newX * 10) / 10)),
           y: Math.max(0, Math.min(100, Math.round(newY * 10) / 10)),
         };
       });
 
-      school.polygon = expandedPolygon;
-      school.polygons = [expandedPolygon];
+      // Snapping to the perimeter of the canvas to eliminate flank/corner dead zones
+      const snappedPolygon = expandedPolygon.map((p) => {
+        let x = p.x;
+        let y = p.y;
+        if (x <= 10) x = 0;
+        else if (x >= 90) x = 100;
+        if (y <= 10) y = 0;
+        else if (y >= 90) y = 100;
+        return { x, y };
+      });
+
+      school.polygon = snappedPolygon;
+      school.polygons = [snappedPolygon];
     } else {
-      // Fallback: simple polygon around the school center if no centers are assigned
+      // Fallback: simple snapped polygon around the school center if no centers are assigned
       const rad = 25.0;
       const poly: Point[] = [];
       const steps = 8;
@@ -885,8 +905,19 @@ export function generateScenario(params: ScenarioParams): {
           y: Math.max(0, Math.min(100, Math.round((school.y + rad * Math.sin(angle)) * 10) / 10)),
         });
       }
-      school.polygon = poly;
-      school.polygons = [poly];
+      
+      const snappedPoly = poly.map((p) => {
+        let x = p.x;
+        let y = p.y;
+        if (x <= 10) x = 0;
+        else if (x >= 90) x = 100;
+        if (y <= 10) y = 0;
+        else if (y >= 90) y = 100;
+        return { x, y };
+      });
+      
+      school.polygon = snappedPoly;
+      school.polygons = [snappedPoly];
     }
     school.pathD = undefined; // clear pathD since we render polygon elements directly
   });
@@ -1031,20 +1062,18 @@ export function regenerateHouseholdsForCenters(
   const households: Household[] = [];
   const settlementCount = centers.length;
   
-  const SETTLEMENT_WEIGHTS: Record<number, number[]> = {
-    1: [45],
-    2: [30, 15],
-    3: [25, 13, 7],
-    4: [22, 12, 7, 4],
-    5: [20, 12, 7, 4, 2],
-    6: [18, 11, 7, 5, 3, 1],
-  };
+  const randomWeights = Array.from({ length: settlementCount }, () => Math.random() * 8.0 + 2.0);
+  const totalWeight = randomWeights.reduce((sum, w) => sum + w, 0);
 
-  const weights = SETTLEMENT_WEIGHTS[settlementCount] || [45];
-
+  let allocatedStudents = 0;
   centers.forEach((center, index) => {
-    const weight = weights[index] ?? 1;
-    const countForThisCenter = Math.round(villageCount * (weight / 45));
+    let countForThisCenter = 0;
+    if (index === settlementCount - 1) {
+      countForThisCenter = villageCount - allocatedStudents;
+    } else {
+      countForThisCenter = Math.round(villageCount * (randomWeights[index] / totalWeight));
+      allocatedStudents += countForThisCenter;
+    }
     center.headcount = countForThisCenter;
 
     const rad = center.dispersionRadius;
