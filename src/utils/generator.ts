@@ -673,62 +673,80 @@ export function generateScenario(params: ScenarioParams): {
     });
   }
 
-  // 4. Calculate vertical column catchment polygons
-  if (schoolCount === 1) {
-    if (schools[0]) {
-      schools[0].polygon = [
-        { x: 0, y: 0 },
-        { x: 100, y: 0 },
-        { x: 100, y: 100 },
-        { x: 0, y: 100 },
-      ];
+  // 4. Generate dynamic school catchment polygons satisfying settlement inclusion and overlap rules
+  const villageAssignments: Record<string, string[]> = {};
+  centers.forEach((center) => {
+    villageAssignments[center.id] = [];
+    
+    // Always assign to the closest school (Euclidean)
+    let closestSchool = schools[0];
+    let minDist = Infinity;
+    schools.forEach((s) => {
+      const d = getDistance(center.x, center.y, s.x, s.y);
+      if (d < minDist) {
+        minDist = d;
+        closestSchool = s;
+      }
+    });
+    
+    villageAssignments[center.id].push(closestSchool.id);
+    
+    // 40% chance to also assign to another random school to create overlap
+    if (schools.length > 1 && Math.random() < 0.4) {
+      const otherSchools = schools.filter((s) => s.id !== closestSchool.id);
+      const secondSchool = otherSchools[Math.floor(Math.random() * otherSchools.length)];
+      villageAssignments[center.id].push(secondSchool.id);
     }
-  } else if (schoolCount === 2) {
-    const xMid = (schools[0].x + schools[1].x) / 2;
-    if (schools[0]) {
-      schools[0].polygon = [
-        { x: 0, y: 0 },
-        { x: Math.round((xMid + 10) * 10) / 10, y: 0 },
-        { x: Math.round((xMid + 10) * 10) / 10, y: 100 },
-        { x: 0, y: 100 },
-      ];
+  });
+
+  // Generate custom polygons for each school
+  schools.forEach((school) => {
+    const assignedCenters = centers.filter((c) => villageAssignments[c.id].includes(school.id));
+    
+    const vertexCount = 8;
+    const angles: number[] = [];
+    const shift = Math.random() * 0.15 + 0.05;
+    for (let i = 0; i < vertexCount; i++) {
+      angles.push(shift + (i * 2 * Math.PI) / vertexCount);
     }
-    if (schools[1]) {
-      schools[1].polygon = [
-        { x: Math.round((xMid - 10) * 10) / 10, y: 0 },
-        { x: 100, y: 0 },
-        { x: 100, y: 100 },
-        { x: Math.round((xMid - 10) * 10) / 10, y: 100 },
-      ];
-    }
-  } else if (schoolCount === 3) {
-    const xMid12 = (schools[0].x + schools[1].x) / 2;
-    const xMid23 = (schools[1].x + schools[2].x) / 2;
-    if (schools[0]) {
-      schools[0].polygon = [
-        { x: 0, y: 0 },
-        { x: Math.round((xMid12 + 10) * 10) / 10, y: 0 },
-        { x: Math.round((xMid12 + 10) * 10) / 10, y: 100 },
-        { x: 0, y: 100 },
-      ];
-    }
-    if (schools[1]) {
-      schools[1].polygon = [
-        { x: Math.round((xMid12 - 10) * 10) / 10, y: 0 },
-        { x: Math.round((xMid23 + 10) * 10) / 10, y: 0 },
-        { x: Math.round((xMid23 + 10) * 10) / 10, y: 100 },
-        { x: Math.round((xMid12 - 10) * 10) / 10, y: 100 },
-      ];
-    }
-    if (schools[2]) {
-      schools[2].polygon = [
-        { x: Math.round((xMid23 - 10) * 10) / 10, y: 0 },
-        { x: 100, y: 0 },
-        { x: 100, y: 100 },
-        { x: Math.round((xMid23 - 10) * 10) / 10, y: 100 },
-      ];
-    }
-  }
+
+    school.polygon = angles.map((angle) => {
+      let maxRequiredRadius = 25.0; // minimum base radius for school polygon
+
+      assignedCenters.forEach((center) => {
+        const dx = center.x - school.x;
+        const dy = center.y - school.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        let vAngle = Math.atan2(dy, dx);
+        if (vAngle < 0) vAngle += 2 * Math.PI;
+
+        let diff = Math.abs(vAngle - angle);
+        if (diff > Math.PI) diff = 2 * Math.PI - diff;
+
+        if (diff < Math.PI / 3) {
+          const maxSpread = center.dispersionRadius * 2;
+          const required = dist + maxSpread + 6.0;
+          if (required > maxRequiredRadius) {
+            maxRequiredRadius = required;
+          }
+        }
+      });
+
+      const radius = maxRequiredRadius + Math.random() * 3.0;
+
+      let x = school.x + radius * Math.cos(angle);
+      let y = school.y + radius * Math.sin(angle);
+
+      x = Math.max(0, Math.min(100, x));
+      y = Math.max(0, Math.min(100, y));
+
+      return {
+        x: Math.round(x * 10) / 10,
+        y: Math.round(y * 10) / 10,
+      };
+    });
+  });
 
   return {
     households,
