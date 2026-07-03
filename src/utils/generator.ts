@@ -829,19 +829,25 @@ export function generateScenario(params: ScenarioParams): {
     });
   }
 
-  // 4. Generate dynamic school catchment polygons satisfying settlement-first Voronoi architecture
+  // 4. Generate dynamic school catchment polygons satisfying arbitrary administrative zoning (decoupled from physical distance)
+  const sortedCentersByY = [...centers].sort((a, b) => a.y - b.y);
   const schoolAssignments: Record<string, string> = {};
-  centers.forEach((center) => {
-    let closestSchoolId = schools[0].id;
-    let minDist = Infinity;
-    schools.forEach((s) => {
-      const d = getDistance(center.x, center.y, s.x, s.y);
-      if (d < minDist) {
-        minDist = d;
-        closestSchoolId = s.id;
+  
+  sortedCentersByY.forEach((center, idx) => {
+    let groupIdx = 0;
+    if (schools.length === 2) {
+      groupIdx = idx < Math.ceil(centers.length / 2) ? 0 : 1;
+    } else if (schools.length === 3) {
+      const third = Math.ceil(centers.length / 3);
+      if (idx < third) {
+        groupIdx = 0;
+      } else if (idx < third * 2) {
+        groupIdx = 1;
+      } else {
+        groupIdx = 2;
       }
-    });
-    schoolAssignments[center.id] = closestSchoolId;
+    }
+    schoolAssignments[center.id] = schools[groupIdx].id;
   });
 
   // Calculate and assign expanded Voronoi cells for each school
@@ -958,11 +964,27 @@ export function calculateFinancials(
   const totalStudents = households.length;
   const catchmentCost = totalStudents * 10;
 
-  // 1. Group households by cohort
+  // 1. Group households by cohort (Nearest assignments are used to calculate the nearestCost/splits comparison)
   const villageCohorts: Record<string, Household[]> = {};
   const isolatedCohort: Household[] = [];
 
-  households.forEach((h) => {
+  const targetHouseholds = activePolicy === 'nearest'
+    ? households
+    : households.map((h) => {
+        if (schools.length === 0) return h;
+        const sortedSchools = [...schools].sort((a, b) => a.x - b.x);
+        const distances = sortedSchools.map((s) => ({
+          id: s.id,
+          distance: getDistance(h.x, h.y, s.x, s.y),
+        }));
+        distances.sort((a, b) => a.distance - b.distance);
+        return {
+          ...h,
+          assignedSchoolId: distances[0].id as any,
+        };
+      });
+
+  targetHouseholds.forEach((h) => {
     if (h.type === 'village' && h.settlementId) {
       if (!villageCohorts[h.settlementId]) {
         villageCohorts[h.settlementId] = [];
