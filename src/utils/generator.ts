@@ -348,16 +348,40 @@ export function getDistanceToSegment(px: number, py: number, ax: number, ay: num
 }
 
 /**
- * Checks if a point lies in the organic Voronoi overlap corridor (falls inside > 1 expanded polygons)
+ * Checks if a point lies in the organic Voronoi overlap corridor (within 8 units of any internal cell boundary edge)
  */
 export function isPointInOverlap(
   px: number,
   py: number,
-  schools: School[]
+  schools: School[],
+  buffer = 8
 ): boolean {
-  const point = { x: px, y: py };
-  const containing = schools.filter((s) => isPointInPolygon(point, s.polygon));
-  return containing.length > 1;
+  for (const school of schools) {
+    const poly = school.polygon;
+    if (!poly || poly.length < 3) continue;
+    
+    for (let i = 0; i < poly.length; i++) {
+      const A = poly[i];
+      const B = poly[(i + 1) % poly.length];
+      
+      const ax = A.x, ay = A.y, bx = B.x, by = B.y;
+      
+      // Determine if segment AB is an inner edge (not on the grid boundary X=0,100 or Y=0,100)
+      const isBoundary = 
+        (Math.abs(ax) < 0.2 && Math.abs(bx) < 0.2) ||
+        (Math.abs(ax - 100) < 0.2 && Math.abs(bx - 100) < 0.2) ||
+        (Math.abs(ay) < 0.2 && Math.abs(by) < 0.2) ||
+        (Math.abs(ay - 100) < 0.2 && Math.abs(by - 100) < 0.2);
+        
+      if (!isBoundary) {
+        const dist = getDistanceToSegment(px, py, ax, ay, bx, by);
+        if (dist <= buffer) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }
 
 /**
@@ -409,9 +433,8 @@ export function assignHouseholds(
     }
 
     // policy === 'catchment'
-    // Find all schools whose expanded polygon contains the student
-    const containingSchools = schools.filter((s) => isPointInPolygon(h, s.polygon));
-    const inOverlap = containingSchools.length > 1;
+    // Determine if student is in the organic overlap corridor (within 8 units of shared border)
+    const inOverlap = isPointInOverlap(h.x, h.y, schools, 8);
 
     let assignedSchoolId: string;
 
@@ -421,8 +444,8 @@ export function assignHouseholds(
         if (h.type === 'village' && h.settlementId) {
           const center = centers.find((c) => c.id === h.settlementId);
           if (center) {
-            // Find school closest to settlement center (Euclidean) among containing schools
-            const sortedCentDist = containingSchools.map((s) => ({
+            // Find school closest to settlement center (Euclidean) among all active schools
+            const sortedCentDist = schools.map((s) => ({
               id: s.id,
               dist: getDistance(center.x, center.y, s.x, s.y),
             })).sort((a, b) => a.dist - b.dist);
@@ -440,8 +463,8 @@ export function assignHouseholds(
           const score = getDeterministicScore(h.id);
           assignedSchoolId = score < legacySplit.a ? 'school-a' : 'school-b';
         } else {
-          // 3 schools: Attractiveness utility-based split among containing schools
-          const utilities = containingSchools.map((s) => {
+          // 3 schools: Attractiveness utility-based split
+          const utilities = schools.map((s) => {
             const dist = getDistance(h.x, h.y, s.x, s.y);
             const distTerm = dist > 0.1 ? 1.0 / dist : 10.0;
             const attr = attractiveness[s.id] ?? 0.0;
@@ -454,7 +477,7 @@ export function assignHouseholds(
           if (sumUtility > 0) {
             const score = getDeterministicScore(h.id);
             let accum = 0;
-            let assignedId = containingSchools[0].id;
+            let assignedId = schools[0].id;
             
             for (let k = 0; k < utilities.length; k++) {
               const prob = (utilities[k].utility / sumUtility) * 100;
@@ -470,11 +493,8 @@ export function assignHouseholds(
           }
         }
       }
-    } else if (containingSchools.length === 1) {
-      // Exclusive Zone: strictly locked to that single catchment school
-      assignedSchoolId = containingSchools[0].id;
     } else {
-      // Fallback
+      // Exclusive Zone: locked to Voronoi school cell
       assignedSchoolId = closestWeightedSchoolId;
     }
 

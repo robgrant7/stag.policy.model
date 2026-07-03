@@ -197,8 +197,8 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                     x2={bx}
                     y2={100 - by}
                     stroke={school.color}
-                    strokeWidth="12"
-                    strokeOpacity="0.08"
+                    strokeWidth="16"
+                    strokeOpacity="0.12"
                     strokeLinecap="round"
                   />
                 );
