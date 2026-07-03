@@ -109,7 +109,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
       <div className="flex-1 w-full flex items-center justify-center p-6 md:p-8 select-none">
         
         {/* Aspect Ratio Box (Square 1:1) */}
-        <div className="w-full aspect-square max-h-[80vh] bg-slate-950 border border-slate-800 relative shadow-2xl">
+        <div className="w-full max-w-[85vh] aspect-square border border-slate-800 relative bg-slate-950 shadow-2xl">
           
           {/* Grid Lines */}
           {ticks.map((tick) => (

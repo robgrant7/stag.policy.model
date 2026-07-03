@@ -49,50 +49,58 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
     });
   };
 
-  const handleSplitChange = (school: 'a' | 'b' | 'c', value: number) => {
-    const clampedValue = Math.max(0, Math.min(100, value));
-    
-    let newA = legacySplit.a;
-    let newB = legacySplit.b;
-    let newC = legacySplit.c;
-    
-    if (school === 'a') {
-      newA = clampedValue;
-      const remaining = 100 - newA;
-      const currentSumBC = legacySplit.b + legacySplit.c;
-      if (currentSumBC > 0) {
-        newB = Math.round(remaining * (legacySplit.b / currentSumBC));
-        newC = remaining - newB;
-      } else {
-        newB = Math.floor(remaining / 2);
-        newC = remaining - newB;
-      }
-    } else if (school === 'b') {
-      newB = clampedValue;
-      const remaining = 100 - newB;
-      const currentSumAC = legacySplit.a + legacySplit.c;
-      if (currentSumAC > 0) {
-        newA = Math.round(remaining * (legacySplit.a / currentSumAC));
-        newC = remaining - newA;
-      } else {
-        newA = Math.floor(remaining / 2);
-        newC = remaining - newA;
-      }
-    } else if (school === 'c') {
-      newC = clampedValue;
-      const remaining = 100 - newC;
-      const currentSumAB = legacySplit.a + legacySplit.b;
-      if (currentSumAB > 0) {
-        newA = Math.round(remaining * (legacySplit.a / currentSumAB));
-        newB = remaining - newA;
-      } else {
-        newA = Math.floor(remaining / 2);
-        newB = remaining - newA;
-      }
-    }
-    
-    onLegacySplitChange({ a: newA, b: newB, c: newC });
+
+
+  const svgRef = React.useRef<SVGSVGElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    setIsDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    updateFromPointer(e);
   };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (isDragging) {
+      updateFromPointer(e);
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    setIsDragging(false);
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
+  const updateFromPointer = (e: React.PointerEvent) => {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 200;
+    const y = ((e.clientY - rect.top) / rect.height) * 170;
+
+    const tA = (130 - y) / 110;
+    const tB = (110 * (x - 170) - 70 * (y - 130)) / -15400;
+    const tC = 1 - tA - tB;
+
+    const clampedA = Math.max(0, Math.min(1, tA));
+    const clampedB = Math.max(0, Math.min(1, tB));
+    const clampedC = Math.max(0, Math.min(1, tC));
+    const sum = clampedA + clampedB + clampedC;
+
+    const normA = sum > 0 ? clampedA / sum : 1/3;
+    const normB = sum > 0 ? clampedB / sum : 1/3;
+
+    const pctA = Math.round(normA * 100);
+    const pctB = Math.round(normB * 100);
+    const pctC = 100 - pctA - pctB;
+
+    onLegacySplitChange({ a: pctA, b: pctB, c: pctC });
+  };
+
+  const tA = legacySplit.a / 100;
+  const tB = legacySplit.b / 100;
+  const tC = legacySplit.c / 100;
+  const handleX = tA * 100 + tB * 30 + tC * 170;
+  const handleY = tA * 20 + tB * 130 + tC * 130;
 
   return (
     <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-xl shadow-xl space-y-6">
@@ -207,61 +215,59 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
           {overlapRule === 'legacy_slider' && params.schoolCount === 3 && (
             <div className="space-y-4 pt-1 animate-fadeIn bg-slate-950/40 border border-slate-850 p-4 rounded-xl">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">3-Way Legacy Split</span>
+                <span className="text-xs font-bold text-slate-350 uppercase tracking-wider">3-Way Legacy Split</span>
                 <span className="text-[10px] text-slate-500 font-bold bg-slate-900 px-2 py-0.5 rounded-full border border-slate-800">
-                  Total: {legacySplit.a + legacySplit.b + legacySplit.c}%
+                  Interactive Triangle
                 </span>
               </div>
-              
-              <div className="space-y-3">
-                {/* School A */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-slate-400">School A (Left Sector)</span>
-                    <span className="text-blue-400 font-bold">{legacySplit.a}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={legacySplit.a}
-                    onChange={(e) => handleSplitChange('a', parseInt(e.target.value))}
-                    className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-blue-500 border border-slate-800"
-                  />
-                </div>
 
-                {/* School B */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-slate-400">School B (Middle Sector)</span>
-                    <span className="text-red-400 font-bold">{legacySplit.b}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={legacySplit.b}
-                    onChange={(e) => handleSplitChange('b', parseInt(e.target.value))}
-                    className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-red-500 border border-slate-800"
+              <div className="flex justify-center">
+                <svg
+                  ref={svgRef}
+                  className="w-full max-w-[200px] aspect-[200/170] select-none touch-none"
+                  viewBox="0 0 200 170"
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                >
+                  {/* Background Triangle */}
+                  <polygon
+                    points="100,20 30,130 170,130"
+                    fill="#090d16"
+                    stroke="#334155"
+                    strokeWidth="1.5"
                   />
-                </div>
 
-                {/* School C */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-slate-400">School C (Right Sector)</span>
-                    <span className="text-yellow-500 font-bold">{legacySplit.c}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={legacySplit.c}
-                    onChange={(e) => handleSplitChange('c', parseInt(e.target.value))}
-                    className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-yellow-500 border border-slate-800"
+                  {/* Barycentric gridlines connecting vertices to handle */}
+                  <line x1="100" y1="20" x2={handleX} y2={handleY} stroke="#3b82f6" strokeWidth="1" strokeDasharray="2,2" opacity="0.6" />
+                  <line x1="30" y1="130" x2={handleX} y2={handleY} stroke="#ef4444" strokeWidth="1" strokeDasharray="2,2" opacity="0.6" />
+                  <line x1="170" y1="130" x2={handleX} y2={handleY} stroke="#84cc16" strokeWidth="1" strokeDasharray="2,2" opacity="0.6" />
+
+                  {/* Vertex Pins */}
+                  <circle cx="100" cy="20" r="3.5" fill="#3b82f6" />
+                  <circle cx="30" cy="130" r="3.5" fill="#ef4444" />
+                  <circle cx="170" cy="130" r="3.5" fill="#84cc16" />
+
+                  {/* Vertex Text Labels */}
+                  <text x="100" y="13" textAnchor="middle" fill="#3b82f6" className="text-[9px] font-black uppercase tracking-wider">A: {legacySplit.a}%</text>
+                  <text x="30" y="143" textAnchor="middle" fill="#ef4444" className="text-[9px] font-black uppercase tracking-wider">B: {legacySplit.b}%</text>
+                  <text x="170" y="143" textAnchor="middle" fill="#84cc16" className="text-[9px] font-black uppercase tracking-wider">C: {legacySplit.c}%</text>
+
+                  {/* Draggable Selector Handle */}
+                  <circle
+                    cx={handleX}
+                    cy={handleY}
+                    r="6.5"
+                    fill="#ffffff"
+                    stroke="#4f46e5"
+                    strokeWidth="2.5"
+                    className="cursor-pointer transition-shadow shadow-md"
                   />
-                </div>
+                </svg>
               </div>
+              <p className="text-[9px] text-slate-500 leading-tight text-center">
+                Drag the white handle dot to partition the dual-catchment overlap allocations dynamically.
+              </p>
             </div>
           )}
           

@@ -544,15 +544,42 @@ export function generateScenario(params: ScenarioParams): {
   const households: Household[] = [];
 
   // 2. Generate village households clustered around centers
-  const baseVillagePerCenter = Math.floor(villageCount / settlementCount);
-  const remainder = villageCount % settlementCount;
-
   centers.forEach((center, index) => {
-    const countForThisCenter = baseVillagePerCenter + (index < remainder ? 1 : 0);
+    let countForThisCenter = 0;
+    let localRadius = clusterRadius;
+
+    if (settlementCount === 1) {
+      countForThisCenter = villageCount;
+      localRadius = clusterRadius * 1.25;
+    } else if (settlementCount === 2) {
+      if (index === 0) {
+        countForThisCenter = Math.round(villageCount * (30 / 45));
+        localRadius = clusterRadius * 1.15;
+      } else {
+        const count1 = Math.round(villageCount * (30 / 45));
+        countForThisCenter = villageCount - count1;
+        localRadius = clusterRadius * 0.75;
+      }
+    } else {
+      // 3 settlements
+      const count1 = Math.round(villageCount * (25 / 45));
+      const count2 = Math.round(villageCount * (13 / 45));
+      
+      if (index === 0) {
+        countForThisCenter = count1;
+        localRadius = clusterRadius * 1.1;
+      } else if (index === 1) {
+        countForThisCenter = count2;
+        localRadius = clusterRadius * 0.8;
+      } else {
+        countForThisCenter = villageCount - count1 - count2;
+        localRadius = clusterRadius * 0.5;
+      }
+    }
 
     for (let i = 0; i < countForThisCenter; i++) {
       const theta = Math.random() * 2 * Math.PI;
-      const r = Math.pow(Math.random(), 1.5) * clusterRadius;
+      const r = Math.pow(Math.random(), 1.5) * localRadius;
       
       let x = center.x + r * Math.cos(theta);
       let y = center.y + r * Math.sin(theta);

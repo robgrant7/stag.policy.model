@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Header } from './components/Header';
 import { ControlPanel } from './components/ControlPanel';
 import { GridCanvas } from './components/GridCanvas';
 import { StatsOverlay } from './components/StatsOverlay';
@@ -133,73 +132,78 @@ function App() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
-      {/* Header Banner */}
-      <Header />
-
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
-        {/* Analytics stats banner */}
-        <StatsOverlay households={households} centers={centers} schools={schools} />
-
-        {/* Responsive Two-Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Controls Column */}
-          <div className="lg:col-span-4 space-y-6">
-            <ControlPanel
-              params={params}
-              onChangeParams={handleChangeParams}
-              transportPolicy={transportPolicy}
-              onPolicyChange={handlePolicyChange}
-              overlapRule={overlapRule}
-              onOverlapRuleChange={handleOverlapRuleChange}
-              legacySplit={legacySplit}
-              onLegacySplitChange={handleLegacySplitChange}
-              onGenerate={() => handleGenerate(params, transportPolicy, overlapRule, legacySplit)}
-              onExport={handleExport}
-            />
-
-            <FinancialPanel
-              financials={financials}
-              activePolicy={transportPolicy}
-            />
-
-            {/* Context/Information block */}
-            <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 text-xs text-slate-400 space-y-3">
-              <h3 className="font-bold text-slate-300 uppercase tracking-wider">Policy Comparison Framework</h3>
-              <p>
-                This visual mapping highlights the difference between local optimization policies:
-              </p>
-              <ul className="list-disc list-inside space-y-1.5 text-slate-450">
-                <li>
-                  <strong className="text-indigo-400 font-semibold">Catchment Policy</strong>: Restricts routing to administrative school boundaries. Points falling in the shared <span className="text-purple-400 font-semibold">Overlap Zone</span> are funneled to School A, and fallbacks are triggered for outliers outside both zones.
-                </li>
-                <li>
-                  <strong className="text-emerald-400 font-semibold">Nearest Policy</strong>: Disregards boundaries, routing students to their closest destination to minimize transit time.
-                </li>
-              </ul>
-              <p className="pt-1 text-[11px] text-slate-500 border-t border-slate-800/60">
-                Observe the visual vectors shift in the overlap zones when toggling between policies.
-              </p>
-            </div>
+    <div className="h-screen max-h-screen w-full flex overflow-hidden bg-slate-950 text-slate-100 font-sans">
+      {/* Left Panel (Controls Sidebar) */}
+      <aside className="w-1/3 h-full overflow-y-auto p-6 border-r border-slate-800 flex flex-col gap-6 bg-slate-950">
+        {/* Header content inline */}
+        <div className="flex items-center gap-3 pb-4 border-b border-slate-900">
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
           </div>
-
-          {/* Visual Grid Column */}
-          <div className="lg:col-span-8 h-full">
-            <GridCanvas
-              households={households}
-              centers={centers}
-              schools={schools}
-              clusterRadius={params.clusterRadius}
-            />
+          <div>
+            <h1 className="text-base font-bold bg-gradient-to-r from-slate-50 via-slate-200 to-slate-400 bg-clip-text text-transparent tracking-tight">
+              STAG Spatial Dispersion Model
+            </h1>
+            <p className="text-[10px] text-slate-400 font-medium">
+              School Transport Policy Modeling & Rural Simulator
+            </p>
           </div>
         </div>
-      </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500">
-        STAG Policy Model • Rural Transport Spatial Simulator • Built with React & Tailwind CSS v4
-      </footer>
+        {/* Mini stats dashboard inside left panel for better readability and structure */}
+        <StatsOverlay households={households} centers={centers} schools={schools} />
+
+        <ControlPanel
+          params={params}
+          onChangeParams={handleChangeParams}
+          transportPolicy={transportPolicy}
+          onPolicyChange={handlePolicyChange}
+          overlapRule={overlapRule}
+          onOverlapRuleChange={handleOverlapRuleChange}
+          legacySplit={legacySplit}
+          onLegacySplitChange={handleLegacySplitChange}
+          onGenerate={() => handleGenerate(params, transportPolicy, overlapRule, legacySplit)}
+          onExport={handleExport}
+        />
+
+        <FinancialPanel
+          financials={financials}
+          activePolicy={transportPolicy}
+        />
+
+        {/* Context/Information block */}
+        <div className="bg-slate-900/40 border border-slate-800/85 rounded-2xl p-5 text-xs text-slate-400 space-y-3">
+          <h3 className="font-bold text-slate-350 uppercase tracking-wider text-[10px]">Policy Comparison Framework</h3>
+          <p className="text-[11px] leading-normal text-slate-400">
+            This visual mapping highlights the difference between local optimization policies:
+          </p>
+          <ul className="list-disc list-inside space-y-1.5 text-slate-450 text-[11px]">
+            <li>
+              <strong className="text-indigo-400 font-semibold">Catchment Policy</strong>: Restricts routing to administrative school boundaries. Points falling in the shared <span className="text-purple-400 font-semibold">Overlap Zone</span> are funneled to School A, and fallbacks are triggered for outliers outside both zones.
+            </li>
+            <li>
+              <strong className="text-emerald-400 font-semibold">Nearest Policy</strong>: Disregards boundaries, routing students to their closest destination to minimize transit time.
+            </li>
+          </ul>
+        </div>
+
+        <footer className="pt-4 border-t border-slate-900 text-center text-[10px] text-slate-500">
+          STAG Policy Model • Rural Transport Spatial Simulator
+        </footer>
+      </aside>
+
+      {/* Right Panel (Map Canvas) */}
+      <main className="w-2/3 h-full flex items-center justify-center p-6 bg-slate-900">
+        <GridCanvas
+          households={households}
+          centers={centers}
+          schools={schools}
+          clusterRadius={params.clusterRadius}
+        />
+      </main>
     </div>
   );
 }
