@@ -830,24 +830,21 @@ export function generateScenario(params: ScenarioParams): {
   }
 
   // 4. Generate dynamic school catchment polygons satisfying arbitrary administrative zoning (decoupled from physical distance)
-  const sortedCentersByY = [...centers].sort((a, b) => a.y - b.y);
   const schoolAssignments: Record<string, string> = {};
   
-  sortedCentersByY.forEach((center, idx) => {
-    let groupIdx = 0;
-    if (schools.length === 2) {
-      groupIdx = idx < Math.ceil(centers.length / 2) ? 0 : 1;
-    } else if (schools.length === 3) {
-      const third = Math.ceil(centers.length / 3);
-      if (idx < third) {
-        groupIdx = 0;
-      } else if (idx < third * 2) {
-        groupIdx = 1;
-      } else {
-        groupIdx = 2;
-      }
+  // First, assign each village center containing a school to that school
+  centers.forEach((center) => {
+    const matchingSchool = schools.find((s) => Math.abs(s.x - center.x) < 0.1 && Math.abs(s.y - center.y) < 0.1);
+    if (matchingSchool) {
+      schoolAssignments[center.id] = matchingSchool.id;
     }
-    schoolAssignments[center.id] = schools[groupIdx].id;
+  });
+
+  // Assign the remaining villages arbitrarily (e.g. based on index)
+  centers.forEach((center, idx) => {
+    if (schoolAssignments[center.id]) return;
+    const schoolIdx = idx % schools.length;
+    schoolAssignments[center.id] = schools[schoolIdx].id;
   });
 
   // Calculate and assign expanded Voronoi cells for each school
@@ -886,8 +883,29 @@ export function generateScenario(params: ScenarioParams): {
         };
       });
 
+      // Clip the expanded polygon against rival schools' perpendicular bisector half-planes
+      // to ensure a rival school's pin never falls inside this school's catchment.
+      let clippedPolygon = expandedPolygon;
+      schools.forEach((rival) => {
+        if (rival.id === school.id) return;
+        const mid = {
+          x: (school.x + rival.x) / 2,
+          y: (school.y + rival.y) / 2,
+        };
+        const normal = {
+          x: school.x - rival.x,
+          y: school.y - rival.y,
+        };
+        const len = Math.sqrt(normal.x * normal.x + normal.y * normal.y);
+        if (len > 0.01) {
+          normal.x /= len;
+          normal.y /= len;
+        }
+        clippedPolygon = clipPolygon(clippedPolygon, mid, normal);
+      });
+
       // Snapping to the perimeter of the canvas to eliminate flank/corner dead zones
-      const snappedPolygon = expandedPolygon.map((p) => {
+      const snappedPolygon = clippedPolygon.map((p) => {
         let x = p.x;
         let y = p.y;
         if (x <= 10) x = 0;
@@ -912,7 +930,26 @@ export function generateScenario(params: ScenarioParams): {
         });
       }
       
-      const snappedPoly = poly.map((p) => {
+      let clippedPoly = poly;
+      schools.forEach((rival) => {
+        if (rival.id === school.id) return;
+        const mid = {
+          x: (school.x + rival.x) / 2,
+          y: (school.y + rival.y) / 2,
+        };
+        const normal = {
+          x: school.x - rival.x,
+          y: school.y - rival.y,
+        };
+        const len = Math.sqrt(normal.x * normal.x + normal.y * normal.y);
+        if (len > 0.01) {
+          normal.x /= len;
+          normal.y /= len;
+        }
+        clippedPoly = clipPolygon(clippedPoly, mid, normal);
+      });
+      
+      const snappedPoly = clippedPoly.map((p) => {
         let x = p.x;
         let y = p.y;
         if (x <= 10) x = 0;

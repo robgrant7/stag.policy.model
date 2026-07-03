@@ -277,41 +277,25 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                   ? hoveredPoint.id
                   : (filterType.startsWith('school-') ? filterType : null);
 
+                if (!activeSchoolId) return null;
+
                 return households.map((h) => {
-                  if (activeSchoolId) {
-                    if (h.assignedSchoolId !== activeSchoolId) return null;
-                    const school = schools.find((s) => s.id === activeSchoolId);
-                    if (!school) return null;
-                    return (
-                      <line
-                        key={`leader-${h.id}`}
-                        x1={h.x}
-                        y1={100 - h.y}
-                        x2={school.x}
-                        y2={100 - school.y}
-                        stroke="#64748b"
-                        strokeWidth="0.5"
-                        opacity={0.15}
-                        className="transition-all duration-300 pointer-events-none"
-                      />
-                    );
-                  } else {
-                    const school = schools.find((s) => s.id === h.assignedSchoolId);
-                    if (!school) return null;
-                    return (
-                      <line
-                        key={`leader-${h.id}`}
-                        x1={h.x}
-                        y1={100 - h.y}
-                        x2={school.x}
-                        y2={100 - school.y}
-                        stroke="#64748b"
-                        strokeWidth="0.5"
-                        opacity={0.08}
-                        className="transition-all duration-300 pointer-events-none"
-                      />
-                    );
-                  }
+                  if (h.assignedSchoolId !== activeSchoolId) return null;
+                  const school = schools.find((s) => s.id === activeSchoolId);
+                  if (!school) return null;
+                  return (
+                    <line
+                      key={`leader-${h.id}`}
+                      x1={h.x}
+                      y1={100 - h.y}
+                      x2={school.x}
+                      y2={100 - school.y}
+                      stroke="#64748b"
+                      strokeWidth="0.5"
+                      opacity={0.15}
+                      className="transition-all duration-300 pointer-events-none"
+                    />
+                  );
                 });
               })()}
             </g>
