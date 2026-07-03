@@ -39,8 +39,8 @@ function App() {
 
   // 3.5. Reactive Transport Operational Cost calculations
   const financials = useMemo(() => {
-    return calculateFinancials(households, centers, transportPolicy);
-  }, [households, centers, transportPolicy]);
+    return calculateFinancials(households, centers, transportPolicy, schools);
+  }, [households, centers, transportPolicy, schools]);
 
   // 4. Scenario generator trigger
   const handleGenerate = (

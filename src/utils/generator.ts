@@ -11,12 +11,12 @@ const CLUSTER_COLORS = [
 ];
 
 const CLUSTER_NAMES = [
-  'Settlement Alpha',
-  'Settlement Beta',
-  'Settlement Gamma',
-  'Settlement Delta',
-  'Settlement Epsilon',
-  'Settlement Zeta'
+  'Settlement A',
+  'Settlement B',
+  'Settlement C',
+  'Settlement D',
+  'Settlement E',
+  'Settlement F'
 ];
 
 /**
@@ -285,40 +285,48 @@ export function getDistanceToSegment(px: number, py: number, ax: number, ay: num
 }
 
 /**
- * Checks if a point lies in the organic Voronoi overlap corridor (within 8 units of any internal cell boundary edge)
+ * Checks if a point lies in the vertical column overlap corridor (within 10 units of any midpoint split)
  */
 export function isPointInOverlap(
   px: number,
-  py: number,
+  _py: number,
   schools: School[],
-  buffer = 8
+  buffer = 10
 ): boolean {
-  for (const school of schools) {
-    const poly = school.polygon;
-    if (!poly || poly.length < 3) continue;
-    
-    for (let i = 0; i < poly.length; i++) {
-      const A = poly[i];
-      const B = poly[(i + 1) % poly.length];
-      
-      const ax = A.x, ay = A.y, bx = B.x, by = B.y;
-      
-      // Determine if segment AB is an inner edge (not on the grid boundary X=0,100 or Y=0,100)
-      const isBoundary = 
-        (Math.abs(ax) < 0.2 && Math.abs(bx) < 0.2) ||
-        (Math.abs(ax - 100) < 0.2 && Math.abs(bx - 100) < 0.2) ||
-        (Math.abs(ay) < 0.2 && Math.abs(by) < 0.2) ||
-        (Math.abs(ay - 100) < 0.2 && Math.abs(by - 100) < 0.2);
-        
-      if (!isBoundary) {
-        const dist = getDistanceToSegment(px, py, ax, ay, bx, by);
-        if (dist <= buffer) {
-          return true;
-        }
-      }
-    }
+  if (schools.length <= 1) return false;
+  
+  // schools are sorted left-to-right
+  const sorted = [...schools].sort((a, b) => a.x - b.x);
+  
+  if (sorted.length === 2) {
+    const xMid = (sorted[0].x + sorted[1].x) / 2;
+    return Math.abs(px - xMid) <= buffer;
+  } else {
+    const xMid12 = (sorted[0].x + sorted[1].x) / 2;
+    const xMid23 = (sorted[1].x + sorted[2].x) / 2;
+    return Math.abs(px - xMid12) <= buffer || Math.abs(px - xMid23) <= buffer;
   }
-  return false;
+}
+
+/**
+ * Helper to determine which horizontal catchment column a student falls into exclusively
+ */
+export function getExclusiveSchoolId(px: number, schools: School[]): string {
+  if (schools.length === 0) return 'school-a';
+  if (schools.length === 1) return schools[0].id;
+  
+  const sorted = [...schools].sort((a, b) => a.x - b.x);
+  
+  if (sorted.length === 2) {
+    const xMid = (sorted[0].x + sorted[1].x) / 2;
+    return px < xMid ? sorted[0].id : sorted[1].id;
+  } else {
+    const xMid12 = (sorted[0].x + sorted[1].x) / 2;
+    const xMid23 = (sorted[1].x + sorted[2].x) / 2;
+    if (px < xMid12) return sorted[0].id;
+    if (px > xMid23) return sorted[2].id;
+    return sorted[1].id;
+  }
 }
 
 /**
@@ -341,11 +349,14 @@ export function assignHouseholds(
     legacySplit = legacySplitInput;
   }
 
+  // Ensure schools are sorted by X to guarantee stable left-to-right indexing
+  const sortedSchools = [...schools].sort((a, b) => a.x - b.x);
+
   return households.map((h) => {
-    if (schools.length === 0) return h;
+    if (sortedSchools.length === 0) return h;
 
     // Calculate Euclidean distances to active schools
-    const distances = schools.map((s) => ({
+    const distances = sortedSchools.map((s) => ({
       id: s.id,
       distance: getDistance(h.x, h.y, s.x, s.y),
     }));
@@ -354,15 +365,8 @@ export function assignHouseholds(
     distances.sort((a, b) => a.distance - b.distance);
     const closestSchoolId = distances[0].id;
 
-    // Find closest school in Weighted Voronoi distance
-    const weightedDistances = schools.map((s) => ({
-      id: s.id,
-      dist: getDistance(h.x, h.y, s.x, s.y) - (s.weight ?? 1.0),
-    })).sort((a, b) => a.dist - b.dist);
-    const closestWeightedSchoolId = weightedDistances[0].id;
-
     // Strict Policy check
-    if (policy === 'nearest' || schools.length === 1) {
+    if (policy === 'nearest' || sortedSchools.length === 1) {
       return {
         ...h,
         assignedSchoolId: closestSchoolId as any,
@@ -370,8 +374,8 @@ export function assignHouseholds(
     }
 
     // policy === 'catchment'
-    // Determine if student is in the organic overlap corridor (within 8 units of shared border)
-    const inOverlap = isPointInOverlap(h.x, h.y, schools, 8);
+    // Determine if student is in the vertical overlap corridor (within 10 units of any midpoint)
+    const inOverlap = isPointInOverlap(h.x, h.y, sortedSchools, 10);
 
     let assignedSchoolId: string;
 
@@ -382,26 +386,25 @@ export function assignHouseholds(
           const center = centers.find((c) => c.id === h.settlementId);
           if (center) {
             // Find school closest to settlement center (Euclidean) among all active schools
-            const sortedCentDist = schools.map((s) => ({
+            const sortedCentDist = sortedSchools.map((s) => ({
               id: s.id,
               dist: getDistance(center.x, center.y, s.x, s.y),
             })).sort((a, b) => a.dist - b.dist);
             assignedSchoolId = sortedCentDist[0].id;
           } else {
-            assignedSchoolId = closestWeightedSchoolId;
+            assignedSchoolId = getExclusiveSchoolId(h.x, sortedSchools);
           }
         } else {
-          assignedSchoolId = closestWeightedSchoolId;
+          assignedSchoolId = getExclusiveSchoolId(h.x, sortedSchools);
         }
       } else {
         // Historical Legacy Split (Attractiveness or Preference)
-        if (schools.length === 2) {
-          // Fallback to single linear slider for 2 schools
+        if (sortedSchools.length === 2) {
           const score = getDeterministicScore(h.id);
-          assignedSchoolId = score < legacySplit.a ? 'school-a' : 'school-b';
+          assignedSchoolId = score < legacySplit.a ? sortedSchools[0].id : sortedSchools[1].id;
         } else {
           // 3 schools: Attractiveness utility-based split
-          const utilities = schools.map((s) => {
+          const utilities = sortedSchools.map((s) => {
             const dist = getDistance(h.x, h.y, s.x, s.y);
             const distTerm = dist > 0.1 ? 1.0 / dist : 10.0;
             const attr = attractiveness[s.id] ?? 0.0;
@@ -414,7 +417,7 @@ export function assignHouseholds(
           if (sumUtility > 0) {
             const score = getDeterministicScore(h.id);
             let accum = 0;
-            let assignedId = schools[0].id;
+            let assignedId = sortedSchools[0].id;
             
             for (let k = 0; k < utilities.length; k++) {
               const prob = (utilities[k].utility / sumUtility) * 100;
@@ -426,13 +429,13 @@ export function assignHouseholds(
             }
             assignedSchoolId = assignedId;
           } else {
-            assignedSchoolId = closestWeightedSchoolId;
+            assignedSchoolId = getExclusiveSchoolId(h.x, sortedSchools);
           }
         }
       }
     } else {
-      // Exclusive Zone: locked to Voronoi school cell
-      assignedSchoolId = closestWeightedSchoolId;
+      // Exclusive Zone: locked to that single catchment column
+      assignedSchoolId = getExclusiveSchoolId(h.x, sortedSchools);
     }
 
     return {
@@ -507,6 +510,20 @@ export function generateScenario(params: ScenarioParams): {
     }
   }
 
+  // Sort schools horizontally from left to right by their x coordinate
+  schools.sort((a, b) => a.x - b.x);
+  
+  // Re-assign IDs, names, and colors based on horizontal order to match UI indicators
+  const SCHOOL_IDS = ['school-a', 'school-b', 'school-c', 'school-d', 'school-e', 'school-f'] as const;
+  const SCHOOL_NAMES = ['School A', 'School B', 'School C', 'School D', 'School E', 'School F'];
+  const SCHOOL_COLORS = ['#3b82f6', '#ef4444', '#84cc16', '#a855f7', '#f97316', '#06b6d4'];
+  
+  schools.forEach((school, idx) => {
+    school.id = SCHOOL_IDS[idx];
+    school.name = SCHOOL_NAMES[idx];
+    school.color = SCHOOL_COLORS[idx];
+  });
+
   const households: Household[] = [];
 
   // 2. Generate village households clustered around centers
@@ -561,74 +578,58 @@ export function generateScenario(params: ScenarioParams): {
 
   // 4. Calculate vertical column catchment polygons
   if (schoolCount === 1) {
-    const schoolA = schools.find((s) => s.id === 'school-a');
-    if (schoolA) {
-      schoolA.polygon = [
+    if (schools[0]) {
+      schools[0].polygon = [
         { x: 0, y: 0 },
         { x: 100, y: 0 },
         { x: 100, y: 100 },
         { x: 0, y: 100 },
       ];
     }
-  } else {
-    // Sort active schools by X
-    const sorted = [...schools].sort((a, b) => a.x - b.x);
-    
-    if (schoolCount === 2) {
-      const xMid = (sorted[0].x + sorted[1].x) / 2;
-      
-      const s0 = schools.find((s) => s.id === sorted[0].id);
-      if (s0) {
-        s0.polygon = [
-          { x: 0, y: 0 },
-          { x: Math.round((xMid + 10) * 10) / 10, y: 0 },
-          { x: Math.round((xMid + 10) * 10) / 10, y: 100 },
-          { x: 0, y: 100 },
-        ];
-      }
-      
-      const s1 = schools.find((s) => s.id === sorted[1].id);
-      if (s1) {
-        s1.polygon = [
-          { x: Math.round((xMid - 10) * 10) / 10, y: 0 },
-          { x: 100, y: 0 },
-          { x: 100, y: 100 },
-          { x: Math.round((xMid - 10) * 10) / 10, y: 100 },
-        ];
-      }
-    } else if (schoolCount === 3) {
-      const xMid12 = (sorted[0].x + sorted[1].x) / 2;
-      const xMid23 = (sorted[1].x + sorted[2].x) / 2;
-      
-      const s0 = schools.find((s) => s.id === sorted[0].id);
-      if (s0) {
-        s0.polygon = [
-          { x: 0, y: 0 },
-          { x: Math.round((xMid12 + 10) * 10) / 10, y: 0 },
-          { x: Math.round((xMid12 + 10) * 10) / 10, y: 100 },
-          { x: 0, y: 100 },
-        ];
-      }
-      
-      const s1 = schools.find((s) => s.id === sorted[1].id);
-      if (s1) {
-        s1.polygon = [
-          { x: Math.round((xMid12 - 10) * 10) / 10, y: 0 },
-          { x: Math.round((xMid23 + 10) * 10) / 10, y: 0 },
-          { x: Math.round((xMid23 + 10) * 10) / 10, y: 100 },
-          { x: Math.round((xMid12 - 10) * 10) / 10, y: 100 },
-        ];
-      }
-      
-      const s2 = schools.find((s) => s.id === sorted[2].id);
-      if (s2) {
-        s2.polygon = [
-          { x: Math.round((xMid23 - 10) * 10) / 10, y: 0 },
-          { x: 100, y: 0 },
-          { x: 100, y: 100 },
-          { x: Math.round((xMid23 - 10) * 10) / 10, y: 100 },
-        ];
-      }
+  } else if (schoolCount === 2) {
+    const xMid = (schools[0].x + schools[1].x) / 2;
+    if (schools[0]) {
+      schools[0].polygon = [
+        { x: 0, y: 0 },
+        { x: Math.round((xMid + 10) * 10) / 10, y: 0 },
+        { x: Math.round((xMid + 10) * 10) / 10, y: 100 },
+        { x: 0, y: 100 },
+      ];
+    }
+    if (schools[1]) {
+      schools[1].polygon = [
+        { x: Math.round((xMid - 10) * 10) / 10, y: 0 },
+        { x: 100, y: 0 },
+        { x: 100, y: 100 },
+        { x: Math.round((xMid - 10) * 10) / 10, y: 100 },
+      ];
+    }
+  } else if (schoolCount === 3) {
+    const xMid12 = (schools[0].x + schools[1].x) / 2;
+    const xMid23 = (schools[1].x + schools[2].x) / 2;
+    if (schools[0]) {
+      schools[0].polygon = [
+        { x: 0, y: 0 },
+        { x: Math.round((xMid12 + 10) * 10) / 10, y: 0 },
+        { x: Math.round((xMid12 + 10) * 10) / 10, y: 100 },
+        { x: 0, y: 100 },
+      ];
+    }
+    if (schools[1]) {
+      schools[1].polygon = [
+        { x: Math.round((xMid12 - 10) * 10) / 10, y: 0 },
+        { x: Math.round((xMid23 + 10) * 10) / 10, y: 0 },
+        { x: Math.round((xMid23 + 10) * 10) / 10, y: 100 },
+        { x: Math.round((xMid12 - 10) * 10) / 10, y: 100 },
+      ];
+    }
+    if (schools[2]) {
+      schools[2].polygon = [
+        { x: Math.round((xMid23 - 10) * 10) / 10, y: 0 },
+        { x: 100, y: 0 },
+        { x: 100, y: 100 },
+        { x: Math.round((xMid23 - 10) * 10) / 10, y: 100 },
+      ];
     }
   }
 
@@ -659,7 +660,8 @@ export interface FinancialReport {
 export function calculateFinancials(
   households: Household[],
   centers: SettlementCenter[],
-  activePolicy: TransportPolicy
+  activePolicy: TransportPolicy,
+  schools: School[] = []
 ): FinancialReport {
   const totalStudents = households.length;
   const catchmentCost = totalStudents * 10;
@@ -684,11 +686,16 @@ export function calculateFinancials(
 
   // 2. Helper to calculate cost for a cohort
   const calculateCohortCost = (cohortHouseholds: Household[], centerId?: string) => {
-    const counts: Record<string, number> = {
-      'school-a': 0,
-      'school-b': 0,
-      'school-c': 0,
-    };
+    const counts: Record<string, number> = {};
+    if (schools.length > 0) {
+      schools.forEach((s) => {
+        counts[s.id] = 0;
+      });
+    } else {
+      counts['school-a'] = 0;
+      counts['school-b'] = 0;
+      counts['school-c'] = 0;
+    }
 
     cohortHouseholds.forEach((h) => {
       if (h.assignedSchoolId) {
