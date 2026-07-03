@@ -28,6 +28,7 @@ export interface School {
   y: number; // Coordinate on 0-100 scale
   color: string; // Hex color code
   polygon: { x: number; y: number }[]; // Ordered vertices of the irregular catchment area
+  polygons?: { x: number; y: number }[][]; // Multiple polygons for Settlement-First Voronoi cells
   weight?: number; // Boundary weight for Voronoi cells
   pathD?: string; // Cubic Bezier path command for rendering
 }

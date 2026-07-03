@@ -222,12 +222,15 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
             <g clipPath="url(#grid-clip)">
               {/* 1. School Catchment Polygons (Translucent solid tints, naturally blending at overlaps) */}
               {schools.map((school) => {
+                const pointsStr = school.polygon
+                  .map((p) => `${p.x},${100 - p.y}`)
+                  .join(' ');
                 return (
-                  <path
+                  <polygon
                     key={`poly-${school.id}`}
-                    d={school.pathD || `M ${school.polygon.map(p => `${p.x},${100 - p.y}`).join(' L ')} Z`}
+                    points={pointsStr}
                     fill={school.color}
-                    fillOpacity={0.15}
+                    fillOpacity={0.12}
                     stroke={school.color}
                     strokeWidth="0.75"
                     className="transition-all duration-300"
@@ -261,7 +264,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                       y2={100 - center.y}
                       stroke="#475569"
                       strokeWidth="1"
-                      opacity="0.6"
+                      opacity="0.5"
                       className="transition-all duration-300"
                     />
                   );
