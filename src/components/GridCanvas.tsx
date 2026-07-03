@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Household, SettlementCenter, School } from '../types';
 
 interface GridCanvasProps {
@@ -17,6 +17,51 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
   const [hoveredPoint, setHoveredPoint] = useState<Household | SettlementCenter | School | null>(null);
   const [filterType, setFilterType] = useState<string>('all');
   const [selectedSettlementFilter, setSelectedSettlementFilter] = useState<string | null>(null);
+  const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number; eligibleSchools: string[]; status: string } | null>(null);
+
+  const parishes = useMemo(() => {
+    const cells: { row: number; col: number; eligibleSchools: string[]; status: 'exclusive' | 'dual' | 'multi' }[] = [];
+    const sortedSchools = [...schools].sort((a, b) => a.x - b.x);
+    if (sortedSchools.length === 0) return [];
+
+    const xMid12 = sortedSchools[0] && sortedSchools[1] ? (sortedSchools[0].x + sortedSchools[1].x) / 2 : 50;
+    const xMid23 = sortedSchools[1] && sortedSchools[2] ? (sortedSchools[1].x + sortedSchools[2].x) / 2 : 75;
+
+    for (let r = 0; r < 10; r++) {
+      for (let c = 0; c < 10; c++) {
+        const x = c * 10 + 5;
+        const eligible: string[] = [];
+        
+        if (sortedSchools.length === 1) {
+          eligible.push(sortedSchools[0].id);
+        } else if (sortedSchools.length === 2) {
+          if (x < xMid12 + 10) {
+            eligible.push(sortedSchools[0].id);
+          }
+          if (x >= xMid12 - 10) {
+            eligible.push(sortedSchools[1].id);
+          }
+        } else if (sortedSchools.length === 3) {
+          if (x < xMid12 + 10) {
+            eligible.push(sortedSchools[0].id);
+          }
+          if (x >= xMid12 - 10 && x < xMid23 + 10) {
+            eligible.push(sortedSchools[1].id);
+          }
+          if (x >= xMid23 - 10) {
+            eligible.push(sortedSchools[2].id);
+          }
+        }
+
+        let status: 'exclusive' | 'dual' | 'multi' = 'exclusive';
+        if (eligible.length === 2) status = 'dual';
+        if (eligible.length > 2) status = 'multi';
+
+        cells.push({ row: r, col: c, eligibleSchools: eligible, status });
+      }
+    }
+    return cells;
+  }, [schools]);
 
   // Filter households based on legend clicks
   const filteredHouseholds = households.filter((h) => {
@@ -148,7 +193,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
           {/* SVG Overlay Layer: Polygons and Assignment Vectors */}
           {/* Note: In SVG, (0,0) is top-left, so we convert y coordinate: svg_y = 100 - y */}
           <svg
-            className="absolute inset-0 w-full h-full pointer-events-none z-10"
+            className="absolute inset-0 w-full h-full z-10"
             viewBox="0 0 100 100"
             preserveAspectRatio="xMidYMid meet"
           >
@@ -156,28 +201,66 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
               <clipPath id="grid-clip">
                 <rect width="100" height="100" x="0" y="0" />
               </clipPath>
+              <pattern id="hatch-a-b" width="10" height="10" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+                <rect width="10" height="10" fill="#3b82f60a" />
+                <line x1="0" y1="0" x2="0" y2="10" stroke="#3b82f6" strokeWidth="1.5" opacity="0.3" />
+                <line x1="5" y1="0" x2="5" y2="10" stroke="#ef4444" strokeWidth="1.5" opacity="0.3" />
+              </pattern>
+              <pattern id="hatch-b-c" width="10" height="10" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+                <rect width="10" height="10" fill="#ef44440a" />
+                <line x1="0" y1="0" x2="0" y2="10" stroke="#ef4444" strokeWidth="1.5" opacity="0.3" />
+                <line x1="5" y1="0" x2="5" y2="10" stroke="#84cc16" strokeWidth="1.5" opacity="0.3" />
+              </pattern>
+              <pattern id="hatch-a-c" width="10" height="10" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+                <rect width="10" height="10" fill="#3b82f60a" />
+                <line x1="0" y1="0" x2="0" y2="10" stroke="#3b82f6" strokeWidth="1.5" opacity="0.3" />
+                <line x1="5" y1="0" x2="5" y2="10" stroke="#84cc16" strokeWidth="1.5" opacity="0.3" />
+              </pattern>
             </defs>
 
             <g clipPath="url(#grid-clip)">
-              {/* 1. Catchment Polygons */}
-              {schools.map((school) => {
-                const pointsStr = school.polygon
-                  .map((p) => `${p.x},${100 - p.y}`)
-                  .join(' ');
-                  
+              {/* Background grid rects (Parishes) */}
+              {parishes.map((cell) => {
+                const x = cell.col * 10;
+                const y = (9 - cell.row) * 10; // row 0 is top Y=90, row 9 is bottom Y=0
+                
+                let fill = 'transparent';
+                if (cell.status === 'exclusive') {
+                  const sid = cell.eligibleSchools[0];
+                  if (sid === 'school-a') fill = '#3b82f61a';
+                  else if (sid === 'school-b') fill = '#ef44441a';
+                  else if (sid === 'school-c') fill = '#84cc161a';
+                } else if (cell.status === 'dual') {
+                  const sids = cell.eligibleSchools;
+                  if (sids.includes('school-a') && sids.includes('school-b')) {
+                    fill = 'url(#hatch-a-b)';
+                  } else if (sids.includes('school-b') && sids.includes('school-c')) {
+                    fill = 'url(#hatch-b-c)';
+                  } else {
+                    fill = 'url(#hatch-a-c)';
+                  }
+                } else if (cell.status === 'multi') {
+                  // Multi-school overlap (>2 schools): solid deep purple hue
+                  fill = '#6b21a826';
+                }
+
                 return (
-                  <polygon
-                    key={`poly-${school.id}`}
-                    points={pointsStr}
-                    fill={`${school.color}15`}
-                    stroke={school.color}
+                  <rect
+                    key={`parish-${cell.row}-${cell.col}`}
+                    x={x}
+                    y={y}
+                    width="10"
+                    height="10"
+                    fill={fill}
+                    stroke="#ffffff08"
                     strokeWidth="0.5"
-                    strokeDasharray="2,2"
-                    className="transition-all duration-300"
+                    className="transition-all duration-200"
+                    style={{ pointerEvents: 'auto' }}
+                    onMouseEnter={() => setHoveredCell(cell)}
+                    onMouseLeave={() => setHoveredCell(null)}
                   />
                 );
               })}
-
             </g>
           </svg>
 
@@ -367,9 +450,29 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                 X: {hoveredPoint.x.toFixed(1)} | Y: {hoveredPoint.y.toFixed(1)}
               </div>
             </div>
+          ) : hoveredCell ? (
+            <div className="mt-1 space-y-0.5">
+              <div className="font-bold text-slate-100 text-[11px]">
+                Parish Grid [Row {10 - hoveredCell.row}, Col {hoveredCell.col + 1}]
+              </div>
+              <div className="text-[10px] text-slate-400">
+                Status:{' '}
+                <span className="font-bold text-indigo-300">
+                  {hoveredCell.status === 'exclusive' ? 'Exclusive Zone' : 'Shared Catchment'}
+                </span>
+              </div>
+              <div className="text-[10px] text-slate-400">
+                Eligible:{' '}
+                <span className="font-bold text-slate-250">
+                  {hoveredCell.eligibleSchools
+                    .map((sid) => schools.find((s) => s.id === sid)?.name || sid)
+                    .join(', ')}
+                </span>
+              </div>
+            </div>
           ) : (
-            <div className="mt-1 text-slate-500 italic">
-              Hover over pins, polygons, or dots to inspect...
+            <div className="mt-1 text-slate-500 italic text-[10px]">
+              Hover over cells, pins, or dots to inspect...
             </div>
           )}
         </div>

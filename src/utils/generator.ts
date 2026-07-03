@@ -342,6 +342,27 @@ export function getExclusiveSchoolId(px: number, schools: School[]): string {
   }
 }
 
+export function getEligibleSchoolsForCell(x: number, schools: School[]): string[] {
+  if (schools.length === 0) return [];
+  if (schools.length === 1) return [schools[0].id];
+  
+  const sorted = [...schools].sort((a, b) => a.x - b.x);
+  const eligible: string[] = [];
+  
+  if (sorted.length === 2) {
+    const xMid = (sorted[0].x + sorted[1].x) / 2;
+    if (x < xMid + 10) eligible.push(sorted[0].id);
+    if (x >= xMid - 10) eligible.push(sorted[1].id);
+  } else {
+    const xMid12 = (sorted[0].x + sorted[1].x) / 2;
+    const xMid23 = (sorted[1].x + sorted[2].x) / 2;
+    if (x < xMid12 + 10) eligible.push(sorted[0].id);
+    if (x >= xMid12 - 10 && x < xMid23 + 10) eligible.push(sorted[1].id);
+    if (x >= xMid23 - 10) eligible.push(sorted[2].id);
+  }
+  return eligible;
+}
+
 /**
  * Asserts the transport policy assignment rules on a set of student nodes
  */
@@ -387,42 +408,75 @@ export function assignHouseholds(
     }
 
     // policy === 'catchment'
-    // Determine if student is in the vertical overlap corridor (within 10 units of any midpoint)
-    const inOverlap = isPointInOverlap(h.x, h.y, sortedSchools, 10);
+    // Determine the parish grid cell for the student
+    const col = Math.max(0, Math.min(9, Math.floor(h.x / 10)));
+    const cellX = col * 10 + 5;
+    const eligible = getEligibleSchoolsForCell(cellX, sortedSchools);
 
     let assignedSchoolId: string;
 
-    if (inOverlap) {
+    if (eligible.length === 0) {
+      assignedSchoolId = closestSchoolId;
+    } else if (eligible.length === 1) {
+      assignedSchoolId = eligible[0];
+    } else {
+      // Shared / Overlap cell
       if (overlapRule === 'community') {
-        // Feeder Settlement Unity
         if (h.type === 'village' && h.settlementId) {
           const center = centers.find((c) => c.id === h.settlementId);
           if (center) {
-            // Find school closest to settlement center (Euclidean) among all active schools
-            const sortedCentDist = sortedSchools.map((s) => ({
-              id: s.id,
-              dist: getDistance(center.x, center.y, s.x, s.y),
-            })).sort((a, b) => a.dist - b.dist);
-            assignedSchoolId = sortedCentDist[0].id;
+            // Village-to-Parish Anchoring: Home Parish
+            const centerCol = Math.max(0, Math.min(9, Math.floor(center.x / 10)));
+            const centerCellX = centerCol * 10 + 5;
+            const homeEligible = getEligibleSchoolsForCell(centerCellX, sortedSchools);
+            
+            const activeEligible = homeEligible.length > 0 ? homeEligible : eligible;
+
+            if (activeEligible.length === 1) {
+              assignedSchoolId = activeEligible[0];
+            } else {
+              // Unified community routing based on utility split at the center
+              const utilities = activeEligible.map((schoolId) => {
+                const s = sortedSchools.find((sch) => sch.id === schoolId)!;
+                const dist = getDistance(center.x, center.y, s.x, s.y);
+                const distTerm = dist > 0.1 ? 1.0 / dist : 10.0;
+                const attr = attractiveness[schoolId] ?? 0.0;
+                const utility = distTerm * (1.0 + attr);
+                return { id: schoolId, utility };
+              });
+              utilities.sort((a, b) => b.utility - a.utility);
+              assignedSchoolId = utilities[0].id;
+            }
           } else {
-            assignedSchoolId = getExclusiveSchoolId(h.x, sortedSchools);
+            assignedSchoolId = closestSchoolId;
           }
         } else {
-          assignedSchoolId = getExclusiveSchoolId(h.x, sortedSchools);
+          // isolated student: check eligibility
+          const utilities = eligible.map((schoolId) => {
+            const s = sortedSchools.find((sch) => sch.id === schoolId)!;
+            const dist = getDistance(h.x, h.y, s.x, s.y);
+            const distTerm = dist > 0.1 ? 1.0 / dist : 10.0;
+            const attr = attractiveness[schoolId] ?? 0.0;
+            const utility = distTerm * (1.0 + attr);
+            return { id: schoolId, utility };
+          });
+          utilities.sort((a, b) => b.utility - a.utility);
+          assignedSchoolId = utilities[0].id;
         }
       } else {
-        // Historical Legacy Split (Attractiveness or Preference)
+        // legacy_slider
         if (sortedSchools.length === 2) {
           const score = getDeterministicScore(h.id);
           assignedSchoolId = score < legacySplit.a ? sortedSchools[0].id : sortedSchools[1].id;
         } else {
-          // 3 schools: Attractiveness utility-based split
-          const utilities = sortedSchools.map((s) => {
-            const dist = getDistance(h.x, h.y, s.x, s.y);
+          // Attractiveness utility-based split
+          const utilities = eligible.map((schoolId) => {
+            const school = sortedSchools.find((sch) => sch.id === schoolId)!;
+            const dist = getDistance(h.x, h.y, school.x, school.y);
             const distTerm = dist > 0.1 ? 1.0 / dist : 10.0;
-            const attr = attractiveness[s.id] ?? 0.0;
-            const utility = Math.max(0, distTerm * (1.0 + attr));
-            return { id: s.id, utility };
+            const attr = attractiveness[schoolId] ?? 0.0;
+            const utility = distTerm * (1.0 + attr);
+            return { id: schoolId, utility };
           });
           
           const sumUtility = utilities.reduce((sum, u) => sum + u.utility, 0);
@@ -430,7 +484,7 @@ export function assignHouseholds(
           if (sumUtility > 0) {
             const score = getDeterministicScore(h.id);
             let accum = 0;
-            let assignedId = sortedSchools[0].id;
+            let assignedId = eligible[0];
             
             for (let k = 0; k < utilities.length; k++) {
               const prob = (utilities[k].utility / sumUtility) * 100;
@@ -442,13 +496,10 @@ export function assignHouseholds(
             }
             assignedSchoolId = assignedId;
           } else {
-            assignedSchoolId = getExclusiveSchoolId(h.x, sortedSchools);
+            assignedSchoolId = eligible[0];
           }
         }
       }
-    } else {
-      // Exclusive Zone: locked to that single catchment column
-      assignedSchoolId = getExclusiveSchoolId(h.x, sortedSchools);
     }
 
     return {
@@ -589,10 +640,30 @@ export function generateScenario(params: ScenarioParams): {
     }
   });
 
-  // 3. Generate isolated households (uniform random across the entire 100x100 canvas)
+  // 3. Generate isolated households (scattered across un-utilized open grid countryside cells)
+  const utilizedCells = new Set<string>();
+  centers.forEach((c) => {
+    const row = Math.max(0, Math.min(9, Math.floor(c.y / 10)));
+    const col = Math.max(0, Math.min(9, Math.floor(c.x / 10)));
+    utilizedCells.add(`${row},${col}`);
+  });
+
+  const unutilized: { row: number; col: number }[] = [];
+  for (let r = 0; r < 10; r++) {
+    for (let c = 0; c < 10; c++) {
+      if (!utilizedCells.has(`${r},${c}`)) {
+        unutilized.push({ row: r, col: c });
+      }
+    }
+  }
+
   for (let i = 0; i < isolatedCount; i++) {
-    const x = Math.random() * 100;
-    const y = Math.random() * 100;
+    const cell = unutilized.length > 0
+      ? unutilized[Math.floor(Math.random() * unutilized.length)]
+      : { row: Math.floor(Math.random() * 10), col: Math.floor(Math.random() * 10) };
+
+    const x = cell.col * 10 + Math.random() * 10;
+    const y = cell.row * 10 + Math.random() * 10;
 
     households.push({
       id: `isolated-${i + 1}`,
@@ -845,10 +916,30 @@ export function regenerateHouseholdsForCenters(
     }
   });
 
-  // Re-generate isolated households
+  // Re-generate isolated households (scattered across un-utilized open grid countryside cells)
+  const utilizedCells = new Set<string>();
+  centers.forEach((c) => {
+    const row = Math.max(0, Math.min(9, Math.floor(c.y / 10)));
+    const col = Math.max(0, Math.min(9, Math.floor(c.x / 10)));
+    utilizedCells.add(`${row},${col}`);
+  });
+
+  const unutilized: { row: number; col: number }[] = [];
+  for (let r = 0; r < 10; r++) {
+    for (let c = 0; c < 10; c++) {
+      if (!utilizedCells.has(`${r},${c}`)) {
+        unutilized.push({ row: r, col: c });
+      }
+    }
+  }
+
   for (let i = 0; i < isolatedCount; i++) {
-    const x = Math.random() * 100;
-    const y = Math.random() * 100;
+    const cell = unutilized.length > 0
+      ? unutilized[Math.floor(Math.random() * unutilized.length)]
+      : { row: Math.floor(Math.random() * 10), col: Math.floor(Math.random() * 10) };
+
+    const x = cell.col * 10 + Math.random() * 10;
+    const y = cell.row * 10 + Math.random() * 10;
 
     households.push({
       id: `isolated-${i + 1}`,
