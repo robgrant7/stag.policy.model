@@ -106,10 +106,10 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
       </div>
 
       {/* Grid Canvas Wrapper */}
-      <div className="relative flex-1 min-h-[420px] md:min-h-[520px] w-full bg-slate-950 border border-slate-850 rounded-xl overflow-hidden shadow-inner flex items-center justify-center p-8 select-none">
+      <div className="flex-1 w-full flex items-center justify-center p-6 md:p-8 select-none">
         
         {/* Aspect Ratio Box (Square 1:1) */}
-        <div className="relative w-full h-full max-w-[460px] max-h-[460px] aspect-square border border-slate-800/60 bg-slate-950/90 shadow-2xl">
+        <div className="w-full aspect-square max-h-[80vh] bg-slate-950 border border-slate-800 relative shadow-2xl">
           
           {/* Grid Lines */}
           {ticks.map((tick) => (
@@ -169,7 +169,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                       ? 'rgba(59, 130, 246, 0.1)'
                       : school.id === 'school-b'
                       ? 'rgba(239, 68, 68, 0.1)'
-                      : 'rgba(234, 179, 8, 0.1)' // Translucent yellow for School Gamma
+                      : 'rgba(132, 204, 22, 0.12)' // Translucent green/yellow for School Gamma
                   }
                   stroke={school.color}
                   strokeWidth="0.4"

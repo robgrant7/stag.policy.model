@@ -133,43 +133,78 @@ export function isPointInPolygon(point: { x: number; y: number }, polygon: { x: 
 /**
  * Generates N well-spaced settlement center coordinates within the grid range [20, 80]
  */
-export function generateSettlementCenters(count: number, minDistance = 25): SettlementCenter[] {
+export function generateSettlementCenters(count: number): SettlementCenter[] {
   const centers: SettlementCenter[] = [];
   
-  for (let i = 0; i < count; i++) {
-    let x = 50;
-    let y = 50;
-    let attempts = 0;
-    let valid = false;
-    let currentMinDist = minDistance;
-
-    while (!valid && attempts < 100) {
-      x = 20 + Math.random() * 60;
-      y = 20 + Math.random() * 60;
-      
-      valid = true;
-      for (const center of centers) {
-        if (getDistance(x, y, center.x, center.y) < currentMinDist) {
-          valid = false;
-          break;
-        }
-      }
-      
-      attempts++;
-      if (attempts % 20 === 0) {
-        currentMinDist = Math.max(10, currentMinDist - 5);
-      }
-    }
-
+  if (count === 1) {
+    // 1 Center (Central: X: 40-60, Y: 40-60)
+    const x = 40 + Math.random() * 20;
+    const y = 40 + Math.random() * 20;
     centers.push({
-      id: `settlement-${i + 1}`,
-      name: CLUSTER_NAMES[i] || `Settlement ${String.fromCharCode(65 + i)}`,
+      id: 'settlement-1',
+      name: CLUSTER_NAMES[0],
       x: Math.round(x * 10) / 10,
       y: Math.round(y * 10) / 10,
-      color: CLUSTER_COLORS[i % CLUSTER_COLORS.length],
+      color: CLUSTER_COLORS[0],
+    });
+  } else if (count === 2) {
+    // Center 1 (Left: X: 15-35, Y: 20-80)
+    const ax = 15 + Math.random() * 20;
+    const ay = 20 + Math.random() * 60;
+    centers.push({
+      id: 'settlement-1',
+      name: CLUSTER_NAMES[0],
+      x: Math.round(ax * 10) / 10,
+      y: Math.round(ay * 10) / 10,
+      color: CLUSTER_COLORS[0],
+    });
+
+    // Center 2 (Right: X: 65-85, Y: 20-80)
+    const bx = 65 + Math.random() * 20;
+    const by = 20 + Math.random() * 60;
+    centers.push({
+      id: 'settlement-2',
+      name: CLUSTER_NAMES[1],
+      x: Math.round(bx * 10) / 10,
+      y: Math.round(by * 10) / 10,
+      color: CLUSTER_COLORS[1],
+    });
+  } else {
+    // 3 Centers
+    // Center 1 (Left: X: 10-25, Y: 20-80)
+    const ax = 10 + Math.random() * 15;
+    const ay = 20 + Math.random() * 60;
+    centers.push({
+      id: 'settlement-1',
+      name: CLUSTER_NAMES[0],
+      x: Math.round(ax * 10) / 10,
+      y: Math.round(ay * 10) / 10,
+      color: CLUSTER_COLORS[0],
+    });
+
+    // Center 2 (Middle: X: 45-55, Y: 20-80)
+    const bx = 45 + Math.random() * 10;
+    const by = 20 + Math.random() * 60;
+    centers.push({
+      id: 'settlement-2',
+      name: CLUSTER_NAMES[1],
+      x: Math.round(bx * 10) / 10,
+      y: Math.round(by * 10) / 10,
+      color: CLUSTER_COLORS[1],
+    });
+
+    // Center 3 (Right: X: 75-90, Y: 20-80)
+    const cx = 75 + Math.random() * 15;
+    const cy = 20 + Math.random() * 60;
+    centers.push({
+      id: 'settlement-3',
+      name: CLUSTER_NAMES[2],
+      x: Math.round(cx * 10) / 10,
+      y: Math.round(cy * 10) / 10,
+      color: CLUSTER_COLORS[2],
     });
   }
-
+  
   return centers;
 }
 
@@ -326,9 +361,17 @@ export function assignHouseholds(
   schools: School[],
   policy: TransportPolicy,
   overlapRule: 'community' | 'legacy_slider' = 'community',
-  legacyPreference = 70,
+  legacySplitInput: number | { a: number; b: number; c: number } = { a: 40, b: 30, c: 30 },
   centers: SettlementCenter[] = []
 ): Household[] {
+  // Normalize legacySplit input
+  let legacySplit = { a: 40, b: 30, c: 30 };
+  if (typeof legacySplitInput === 'number') {
+    legacySplit = { a: legacySplitInput, b: 100 - legacySplitInput, c: 0 };
+  } else {
+    legacySplit = legacySplitInput;
+  }
+
   return households.map((h) => {
     if (schools.length === 0) return h;
 
@@ -389,7 +432,37 @@ export function assignHouseholds(
       } else {
         // Historical Legacy Split (deterministic probability check)
         const score = getDeterministicScore(h.id);
-        assignedSchoolId = score < legacyPreference ? school1.id : school2.id;
+        
+        if (schools.length === 2) {
+          assignedSchoolId = score < legacySplit.a ? 'school-a' : 'school-b';
+        } else {
+          // 3 active schools: A, B, C
+          const hasA = matchingSchools.some(s => s.id === 'school-a');
+          const hasB = matchingSchools.some(s => s.id === 'school-b');
+          const hasC = matchingSchools.some(s => s.id === 'school-c');
+          
+          if (hasA && hasB) {
+            // A & B overlap corridor
+            const sumAB = legacySplit.a + legacySplit.b;
+            const relativeThreshold = sumAB > 0 ? (legacySplit.a / sumAB) * 100 : 50;
+            assignedSchoolId = score < relativeThreshold ? 'school-a' : 'school-b';
+          } else if (hasB && hasC) {
+            // B & C overlap corridor
+            const sumBC = legacySplit.b + legacySplit.c;
+            const relativeThreshold = sumBC > 0 ? (legacySplit.b / sumBC) * 100 : 50;
+            assignedSchoolId = score < relativeThreshold ? 'school-b' : 'school-c';
+          } else {
+            // Fallback: full split across active schools
+            const sumAll = legacySplit.a + legacySplit.b + legacySplit.c;
+            if (sumAll > 0) {
+              const th1 = (legacySplit.a / sumAll) * 100;
+              const th2 = ((legacySplit.a + legacySplit.b) / sumAll) * 100;
+              assignedSchoolId = score < th1 ? 'school-a' : score < th2 ? 'school-b' : 'school-c';
+            } else {
+              assignedSchoolId = closestSchoolId;
+            }
+          }
+        }
       }
     } else {
       // Fallback for outside all polygons or in 3-way overlap (if any) -> closest school among all active schools
@@ -417,6 +490,57 @@ export function generateScenario(params: ScenarioParams): {
   // 1. Generate centers & schools (polygons will be overwritten with edge-to-edge layout)
   const centers = generateSettlementCenters(settlementCount);
   const schools = generateSchools(schoolCount);
+  
+  // Apply Real-World School Placement Anchor Rules
+  if (schoolCount === 1) {
+    const schoolA = schools.find((s) => s.id === 'school-a');
+    if (schoolA && centers[0]) {
+      schoolA.x = centers[0].x;
+      schoolA.y = centers[0].y;
+    }
+  } else if (schoolCount === 2) {
+    const schoolA = schools.find((s) => s.id === 'school-a');
+    const schoolB = schools.find((s) => s.id === 'school-b');
+    
+    if (schoolA && centers[0]) {
+      schoolA.x = centers[0].x;
+      schoolA.y = centers[0].y;
+    }
+    if (schoolB) {
+      if (centers[1]) {
+        schoolB.x = centers[1].x;
+        schoolB.y = centers[1].y;
+      } else {
+        // Fallback: random in right sector (X: 65-85, Y: 20-80)
+        schoolB.x = Math.round((65 + Math.random() * 20) * 10) / 10;
+        schoolB.y = Math.round((20 + Math.random() * 60) * 10) / 10;
+      }
+    }
+  } else if (schoolCount === 3) {
+    const schoolA = schools.find((s) => s.id === 'school-a');
+    const schoolB = schools.find((s) => s.id === 'school-b');
+    const schoolC = schools.find((s) => s.id === 'school-c');
+    
+    if (schoolA && centers[0]) {
+      schoolA.x = centers[0].x;
+      schoolA.y = centers[0].y;
+    }
+    if (schoolB && centers[1]) {
+      schoolB.x = centers[1].x;
+      schoolB.y = centers[1].y;
+    }
+    if (schoolC) {
+      if (centers[2]) {
+        schoolC.x = centers[2].x;
+        schoolC.y = centers[2].y;
+      } else {
+        // Fallback: random in right sector (X: 75-90, Y: 20-80)
+        schoolC.x = Math.round((75 + Math.random() * 15) * 10) / 10;
+        schoolC.y = Math.round((20 + Math.random() * 60) * 10) / 10;
+      }
+    }
+  }
+
   const households: Household[] = [];
 
   // 2. Generate village households clustered around centers
@@ -476,7 +600,7 @@ export function generateScenario(params: ScenarioParams): {
     
     if (schoolA && schoolB) {
       const xMid = (schoolA.x + schoolB.x) / 2;
-      const overlapWidth = 15;
+      const overlapWidth = 12;
       
       // School A Catchment Polygon: covers X=0 to X_mid + overlapWidth
       schoolA.polygon = [

@@ -8,8 +8,8 @@ interface ControlPanelProps {
   onPolicyChange: (policy: TransportPolicy) => void;
   overlapRule: 'community' | 'legacy_slider';
   onOverlapRuleChange: (rule: 'community' | 'legacy_slider') => void;
-  legacyPreference: number;
-  onLegacyPreferenceChange: (pref: number) => void;
+  legacySplit: { a: number; b: number; c: number };
+  onLegacySplitChange: (split: { a: number; b: number; c: number }) => void;
   onGenerate: () => void;
   onExport: () => void;
 }
@@ -21,8 +21,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   onPolicyChange,
   overlapRule,
   onOverlapRuleChange,
-  legacyPreference,
-  onLegacyPreferenceChange,
+  legacySplit,
+  onLegacySplitChange,
   onGenerate,
   onExport,
 }) => {
@@ -47,6 +47,51 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       ...params,
       [key]: value,
     });
+  };
+
+  const handleSplitChange = (school: 'a' | 'b' | 'c', value: number) => {
+    const clampedValue = Math.max(0, Math.min(100, value));
+    
+    let newA = legacySplit.a;
+    let newB = legacySplit.b;
+    let newC = legacySplit.c;
+    
+    if (school === 'a') {
+      newA = clampedValue;
+      const remaining = 100 - newA;
+      const currentSumBC = legacySplit.b + legacySplit.c;
+      if (currentSumBC > 0) {
+        newB = Math.round(remaining * (legacySplit.b / currentSumBC));
+        newC = remaining - newB;
+      } else {
+        newB = Math.floor(remaining / 2);
+        newC = remaining - newB;
+      }
+    } else if (school === 'b') {
+      newB = clampedValue;
+      const remaining = 100 - newB;
+      const currentSumAC = legacySplit.a + legacySplit.c;
+      if (currentSumAC > 0) {
+        newA = Math.round(remaining * (legacySplit.a / currentSumAC));
+        newC = remaining - newA;
+      } else {
+        newA = Math.floor(remaining / 2);
+        newC = remaining - newA;
+      }
+    } else if (school === 'c') {
+      newC = clampedValue;
+      const remaining = 100 - newC;
+      const currentSumAB = legacySplit.a + legacySplit.b;
+      if (currentSumAB > 0) {
+        newA = Math.round(remaining * (legacySplit.a / currentSumAB));
+        newB = remaining - newA;
+      } else {
+        newA = Math.floor(remaining / 2);
+        newB = remaining - newA;
+      }
+    }
+    
+    onLegacySplitChange({ a: newA, b: newB, c: newC });
   };
 
   return (
@@ -98,58 +143,125 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         </div>
       </div>
 
-      {/* Overlap Assignment Controls (Only if Catchment policy is active and 2 schools are enabled) */}
+      {/* Overlap Assignment Controls (Only if Catchment policy is active and 2+ schools are enabled) */}
       {transportPolicy === 'catchment' && params.schoolCount > 1 && (
         <div className="space-y-4 p-4 rounded-xl border border-indigo-950/40 bg-indigo-950/5 animate-fadeIn">
           <div className="space-y-2">
             <label className="block text-xs font-semibold uppercase tracking-wider text-indigo-400">
               Overlap Assignment Rule
             </label>
-            <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-lg border border-slate-900">
+            <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => onOverlapRuleChange('community')}
-                className={`py-1.5 px-2 rounded text-[10px] font-bold tracking-wide transition-all duration-150 cursor-pointer text-center ${
+                className={`p-3 rounded-xl border text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-1 text-center ${
                   overlapRule === 'community'
-                    ? 'bg-indigo-650/90 text-white font-bold'
-                    : 'text-slate-455 hover:text-slate-200'
+                    ? 'bg-indigo-950/40 border-indigo-500 text-indigo-200 ring-2 ring-indigo-500/20'
+                    : 'bg-slate-950/60 border-slate-850 text-slate-450 hover:text-slate-200 hover:border-slate-800'
                 }`}
               >
-                Community Unity
+                <span className="font-extrabold text-[11px]">Feeder Settlement Unity</span>
+                <span className="text-[9px] font-normal text-slate-500 opacity-90">Community Rule</span>
               </button>
               
               <button
                 type="button"
                 onClick={() => onOverlapRuleChange('legacy_slider')}
-                className={`py-1.5 px-2 rounded text-[10px] font-bold tracking-wide transition-all duration-150 cursor-pointer text-center ${
+                className={`p-3 rounded-xl border text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-1 text-center ${
                   overlapRule === 'legacy_slider'
-                    ? 'bg-indigo-650/90 text-white font-bold'
-                    : 'text-slate-455 hover:text-slate-200'
+                    ? 'bg-indigo-950/40 border-indigo-500 text-indigo-200 ring-2 ring-indigo-500/20'
+                    : 'bg-slate-950/60 border-slate-850 text-slate-450 hover:text-slate-200 hover:border-slate-800'
                 }`}
               >
-                Legacy Preference
+                <span className="font-extrabold text-[11px]">Historical Legacy Split</span>
+                <span className="text-[9px] font-normal text-slate-500 opacity-90">Parental Preference</span>
               </button>
             </div>
           </div>
 
-          {overlapRule === 'legacy_slider' && (
-            <div className="space-y-1.5 pt-1 animate-fadeIn">
+          {overlapRule === 'legacy_slider' && params.schoolCount === 2 && (
+            <div className="space-y-2 pt-1 animate-fadeIn bg-slate-950/40 border border-slate-850 p-4 rounded-xl">
               <div className="flex justify-between text-[10px]">
-                <span className="text-slate-450 font-medium">Split (School A vs B)</span>
-                <span className="text-indigo-400 font-bold">{legacyPreference}% / {100 - legacyPreference}%</span>
+                <span className="text-slate-400 font-bold uppercase tracking-wider">Legacy Preference (A vs B)</span>
+                <span className="text-indigo-400 font-extrabold">{legacySplit.a}% / {100 - legacySplit.a}%</span>
               </div>
               <input
                 type="range"
                 min="0"
                 max="100"
                 step="5"
-                value={legacyPreference}
-                onChange={(e) => onLegacyPreferenceChange(parseInt(e.target.value))}
-                className="w-full h-1 bg-slate-950 rounded appearance-none cursor-pointer accent-indigo-500 border border-slate-800"
+                value={legacySplit.a}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  onLegacySplitChange({ a: val, b: 100 - val, c: 0 });
+                }}
+                className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-indigo-500 border border-slate-800"
               />
-              <p className="text-[9px] text-slate-500 leading-tight">
-                Deterministic random split of student nodes residing in the central overlap corridor.
-              </p>
+              <div className="flex justify-between text-[8px] text-slate-550">
+                <span>School A (Left)</span>
+                <span>School B (Right)</span>
+              </div>
+            </div>
+          )}
+
+          {overlapRule === 'legacy_slider' && params.schoolCount === 3 && (
+            <div className="space-y-4 pt-1 animate-fadeIn bg-slate-950/40 border border-slate-850 p-4 rounded-xl">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">3-Way Legacy Split</span>
+                <span className="text-[10px] text-slate-500 font-bold bg-slate-900 px-2 py-0.5 rounded-full border border-slate-800">
+                  Total: {legacySplit.a + legacySplit.b + legacySplit.c}%
+                </span>
+              </div>
+              
+              <div className="space-y-3">
+                {/* School A */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-slate-400">School A (Left Sector)</span>
+                    <span className="text-blue-400 font-bold">{legacySplit.a}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={legacySplit.a}
+                    onChange={(e) => handleSplitChange('a', parseInt(e.target.value))}
+                    className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-blue-500 border border-slate-800"
+                  />
+                </div>
+
+                {/* School B */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-slate-400">School B (Middle Sector)</span>
+                    <span className="text-red-400 font-bold">{legacySplit.b}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={legacySplit.b}
+                    onChange={(e) => handleSplitChange('b', parseInt(e.target.value))}
+                    className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-red-500 border border-slate-800"
+                  />
+                </div>
+
+                {/* School C */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-slate-400">School C (Right Sector)</span>
+                    <span className="text-yellow-500 font-bold">{legacySplit.c}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={legacySplit.c}
+                    onChange={(e) => handleSplitChange('c', parseInt(e.target.value))}
+                    className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-yellow-500 border border-slate-800"
+                  />
+                </div>
+              </div>
             </div>
           )}
           
