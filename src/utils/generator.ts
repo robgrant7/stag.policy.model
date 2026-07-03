@@ -11,12 +11,12 @@ const CLUSTER_COLORS = [
 ];
 
 const CLUSTER_NAMES = [
-  'Settlement A',
-  'Settlement B',
-  'Settlement C',
-  'Settlement D',
-  'Settlement E',
-  'Settlement F'
+  'Kirkby-on-the-Moor',
+  'Appleton-le-Moors',
+  'Hutton-le-Hole',
+  'Thornton-le-Dale',
+  'Osmotherley',
+  'Glaisdale'
 ];
 
 /**
@@ -173,12 +173,20 @@ export function generateSettlementCenters(count: number): SettlementCenter[] {
       }
     }
 
+    const archetype = Math.random() < 0.4 ? 'linear' : 'nucleated';
+    const dispersionRadius = 6.0;
+    const roadAngle = Math.round(Math.random() * 360);
+
     centers.push({
       id: `settlement-${i + 1}`,
       name: CLUSTER_NAMES[i] || `Settlement ${i + 1}`,
       x: Math.round(bestX * 10) / 10,
       y: Math.round(bestY * 10) / 10,
       color: CLUSTER_COLORS[i] || '#475569',
+      headcount: 0, // Will be set in generateScenario
+      archetype,
+      dispersionRadius,
+      roadAngle,
     });
   }
   
@@ -454,7 +462,7 @@ export function generateScenario(params: ScenarioParams): {
   centers: SettlementCenter[];
   schools: School[];
 } {
-  const { settlementCount, schoolCount, villageCount, isolatedCount, clusterRadius } = params;
+  const { settlementCount, schoolCount, villageCount, isolatedCount } = params;
   
   // 1. Generate centers & schools (polygons will be overwritten with edge-to-edge layout)
   const centers = generateSettlementCenters(settlementCount);
@@ -541,14 +549,27 @@ export function generateScenario(params: ScenarioParams): {
   centers.forEach((center, index) => {
     const weight = weights[index] ?? 1;
     const countForThisCenter = Math.round(villageCount * (weight / 45));
-    const localRadius = clusterRadius * Math.sqrt(weight / 15);
+    center.headcount = countForThisCenter;
+
+    const rad = center.dispersionRadius;
+    const angleRad = (center.roadAngle * Math.PI) / 180;
 
     for (let i = 0; i < countForThisCenter; i++) {
-      const theta = Math.random() * 2 * Math.PI;
-      const r = Math.pow(Math.random(), 1.5) * localRadius;
-      
-      let x = center.x + r * Math.cos(theta);
-      let y = center.y + r * Math.sin(theta);
+      let x = center.x;
+      let y = center.y;
+
+      if (center.archetype === 'linear') {
+        const t = (Math.random() - 0.5) * 2 * rad;
+        const d = (Math.random() - 0.5) * 3.0; // tight maximum perpendicular offset of 1.5 units
+        x += t * Math.cos(angleRad) - d * Math.sin(angleRad);
+        y += t * Math.sin(angleRad) + d * Math.cos(angleRad);
+      } else {
+        // nucleated
+        const theta = Math.random() * 2 * Math.PI;
+        const r = Math.sqrt(Math.random()) * rad;
+        x += r * Math.cos(theta);
+        y += r * Math.sin(theta);
+      }
       
       x = Math.max(0, Math.min(100, x));
       y = Math.max(0, Math.min(100, y));
@@ -759,4 +780,78 @@ export function calculateFinancials(
     deficit,
     splits,
   };
+}
+
+export function regenerateHouseholdsForCenters(
+  centers: SettlementCenter[],
+  villageCount: number,
+  isolatedCount: number,
+  _schools: School[]
+): Household[] {
+  const households: Household[] = [];
+  const settlementCount = centers.length;
+  
+  const SETTLEMENT_WEIGHTS: Record<number, number[]> = {
+    1: [45],
+    2: [30, 15],
+    3: [25, 13, 7],
+    4: [22, 12, 7, 4],
+    5: [20, 12, 7, 4, 2],
+    6: [18, 11, 7, 5, 3, 1],
+  };
+
+  const weights = SETTLEMENT_WEIGHTS[settlementCount] || [45];
+
+  centers.forEach((center, index) => {
+    const weight = weights[index] ?? 1;
+    const countForThisCenter = Math.round(villageCount * (weight / 45));
+    center.headcount = countForThisCenter;
+
+    const rad = center.dispersionRadius;
+    const angleRad = (center.roadAngle * Math.PI) / 180;
+
+    for (let i = 0; i < countForThisCenter; i++) {
+      let x = center.x;
+      let y = center.y;
+
+      if (center.archetype === 'linear') {
+        const t = (Math.random() - 0.5) * 2 * rad;
+        const d = (Math.random() - 0.5) * 3.0; // tight maximum perpendicular offset of 1.5 units
+        x += t * Math.cos(angleRad) - d * Math.sin(angleRad);
+        y += t * Math.sin(angleRad) + d * Math.cos(angleRad);
+      } else {
+        // nucleated
+        const theta = Math.random() * 2 * Math.PI;
+        const r = Math.sqrt(Math.random()) * rad;
+        x += r * Math.cos(theta);
+        y += r * Math.sin(theta);
+      }
+      
+      x = Math.max(0, Math.min(100, x));
+      y = Math.max(0, Math.min(100, y));
+
+      households.push({
+        id: `village-${center.id}-${i + 1}`,
+        x: Math.round(x * 10) / 10,
+        y: Math.round(y * 10) / 10,
+        type: 'village',
+        settlementId: center.id,
+      });
+    }
+  });
+
+  // Re-generate isolated households
+  for (let i = 0; i < isolatedCount; i++) {
+    const x = Math.random() * 100;
+    const y = Math.random() * 100;
+
+    households.push({
+      id: `isolated-${i + 1}`,
+      x: Math.round(x * 10) / 10,
+      y: Math.round(y * 10) / 10,
+      type: 'isolated',
+    });
+  }
+
+  return households;
 }

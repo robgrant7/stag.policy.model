@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { ScenarioParams, TransportPolicy } from '../types';
+import type { ScenarioParams, TransportPolicy, SettlementCenter } from '../types';
 
 interface ControlPanelProps {
   params: ScenarioParams;
@@ -14,6 +14,9 @@ interface ControlPanelProps {
   onAttractivenessChange: (attr: Record<string, number>) => void;
   onGenerate: () => void;
   onExport: () => void;
+  centers?: SettlementCenter[];
+  onUpdateVillage?: (villageId: string, fields: Partial<SettlementCenter>) => void;
+  onResetVillages?: () => void;
 }
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({
@@ -29,6 +32,9 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   onAttractivenessChange,
   onGenerate,
   onExport,
+  centers = [],
+  onUpdateVillage,
+  onResetVillages,
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -375,6 +381,81 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             </div>
           </div>
         )}
+      </div>
+
+      {/* 4. Settlement Registry & Configuration Key */}
+      <div className="space-y-4 pt-4 border-t border-slate-800/80">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold text-slate-350 uppercase tracking-wider">Settlement Registry</h3>
+          {onResetVillages && (
+            <button
+              onClick={onResetVillages}
+              className="text-[9px] font-bold text-rose-400 bg-rose-950/20 hover:bg-rose-950/40 border border-rose-900/40 px-2.5 py-1 rounded-lg transition-all"
+            >
+              Reset to Defaults
+            </button>
+          )}
+        </div>
+        
+        <div className="space-y-3">
+          {centers.map((center) => (
+            <div key={center.id} className="bg-slate-900/50 border border-slate-800/80 p-4 rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full border shadow-sm" style={{ backgroundColor: center.color, borderColor: center.color }} />
+                  <span className="text-xs font-bold text-slate-200">{center.name}</span>
+                </div>
+                <span className="text-[10px] text-slate-400 bg-slate-950 px-2 py-0.5 rounded-full border border-slate-850">
+                  {center.headcount} Pupils
+                </span>
+              </div>
+
+              {/* Archetype Toggle Button Group */}
+              <div className="space-y-1">
+                <span className="text-[9px] text-slate-450 uppercase tracking-wider font-semibold">Layout Archetype</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => onUpdateVillage?.(center.id, { archetype: 'nucleated' })}
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all border ${
+                      center.archetype === 'nucleated'
+                        ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-900/30'
+                        : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-250 hover:bg-slate-900'
+                    }`}
+                  >
+                    Nucleated
+                  </button>
+                  <button
+                    onClick={() => onUpdateVillage?.(center.id, { archetype: 'linear' })}
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all border ${
+                      center.archetype === 'linear'
+                        ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-900/30'
+                        : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-250 hover:bg-slate-900'
+                    }`}
+                  >
+                    Linear (Ribbon)
+                  </button>
+                </div>
+              </div>
+
+              {/* Spread Slider */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-slate-400 font-medium">Cluster Spread</span>
+                  <span className="text-indigo-400 font-bold">{center.dispersionRadius.toFixed(1)} u</span>
+                </div>
+                <input
+                  type="range"
+                  min="3.0"
+                  max="14.0"
+                  step="0.5"
+                  value={center.dispersionRadius}
+                  onChange={(e) => onUpdateVillage?.(center.id, { dispersionRadius: parseFloat(e.target.value) })}
+                  className="w-full h-1 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500 border border-slate-850"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

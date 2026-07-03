@@ -15,6 +15,10 @@ export interface SettlementCenter {
   x: number; // Coordinate on 0-100 scale
   y: number; // Coordinate on 0-100 scale
   color: string; // Color code for styling this cluster uniquely
+  headcount: number;
+  archetype: 'nucleated' | 'linear';
+  dispersionRadius: number;
+  roadAngle: number;
 }
 
 export interface School {
@@ -32,6 +36,6 @@ export interface ScenarioParams {
   schoolCount: number;     // 1 to 6
   villageCount: number;    // default 40
   isolatedCount: number;   // default 10
-  isolatedPercentage: number; // default 15%
+  isolatedPercentage?: number; // default 15%
   clusterRadius: number;   // default 8
 }

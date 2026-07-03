@@ -4,7 +4,7 @@ import { GridCanvas } from './components/GridCanvas';
 import { StatsOverlay } from './components/StatsOverlay';
 import { FinancialPanel } from './components/FinancialPanel';
 import type { Household, SettlementCenter, ScenarioParams, School, TransportPolicy } from './types';
-import { generateScenario, assignHouseholds, calculateFinancials } from './utils/generator';
+import { generateScenario, assignHouseholds, calculateFinancials, regenerateHouseholdsForCenters } from './utils/generator';
 
 function App() {
   // 1. Parameter State
@@ -80,7 +80,7 @@ function App() {
       newParams.isolatedPercentage !== params.isolatedPercentage ||
       newParams.villageCount !== params.villageCount
     ) {
-      const pct = newParams.isolatedPercentage;
+      const pct = newParams.isolatedPercentage ?? 15;
       const total = pct >= 100 ? newParams.villageCount : Math.round(newParams.villageCount / (1 - pct / 100));
       newParams.isolatedCount = Math.round(total * (pct / 100));
     }
@@ -115,6 +115,49 @@ function App() {
   const handleAttractivenessChange = (attr: Record<string, number>) => {
     setAttractiveness(attr);
     setHouseholds((prev) => assignHouseholds(prev, schools, transportPolicy, overlapRule, legacySplit, centers, attr));
+  };
+
+  const handleUpdateVillage = (villageId: string, fields: Partial<SettlementCenter>) => {
+    const updatedCenters = centers.map((c) => {
+      if (c.id === villageId) {
+        return { ...c, ...fields };
+      }
+      return c;
+    });
+    setCenters(updatedCenters);
+
+    const newHouseholds = regenerateHouseholdsForCenters(updatedCenters, params.villageCount, params.isolatedCount, schools);
+    const assigned = assignHouseholds(
+      newHouseholds,
+      schools,
+      transportPolicy,
+      overlapRule,
+      legacySplit,
+      updatedCenters,
+      attractiveness
+    );
+    setHouseholds(assigned);
+  };
+
+  const handleResetVillages = () => {
+    const updatedCenters = centers.map((c) => ({
+      ...c,
+      archetype: 'nucleated' as const,
+      dispersionRadius: 6.0,
+    }));
+    setCenters(updatedCenters);
+
+    const newHouseholds = regenerateHouseholdsForCenters(updatedCenters, params.villageCount, params.isolatedCount, schools);
+    const assigned = assignHouseholds(
+      newHouseholds,
+      schools,
+      transportPolicy,
+      overlapRule,
+      legacySplit,
+      updatedCenters,
+      attractiveness
+    );
+    setHouseholds(assigned);
   };
 
   // 5. Export scenario data as JSON
@@ -195,6 +238,9 @@ function App() {
           onAttractivenessChange={handleAttractivenessChange}
           onGenerate={() => handleGenerate(params, transportPolicy, overlapRule, legacySplit, attractiveness)}
           onExport={handleExport}
+          centers={centers}
+          onUpdateVillage={handleUpdateVillage}
+          onResetVillages={handleResetVillages}
         />
 
         <FinancialPanel
@@ -224,7 +270,7 @@ function App() {
       </aside>
 
       {/* Right Panel (Map Canvas) */}
-      <main className="w-2/3 h-full flex items-center justify-center p-6 bg-slate-900">
+      <main className="w-2/3 h-full flex items-center justify-center p-6 bg-slate-900 overflow-hidden">
         <GridCanvas
           households={households}
           centers={centers}
