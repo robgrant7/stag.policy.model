@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import type { ScenarioParams } from '../types';
+import type { ScenarioParams, TransportPolicy } from '../types';
 
 interface ControlPanelProps {
   params: ScenarioParams;
   onChangeParams: (params: ScenarioParams) => void;
+  transportPolicy: TransportPolicy;
+  onPolicyChange: (policy: TransportPolicy) => void;
   onGenerate: () => void;
   onExport: () => void;
 }
@@ -11,6 +13,8 @@ interface ControlPanelProps {
 export const ControlPanel: React.FC<ControlPanelProps> = ({
   params,
   onChangeParams,
+  transportPolicy,
+  onPolicyChange,
   onGenerate,
   onExport,
 }) => {
@@ -23,6 +27,13 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
     });
   };
 
+  const handleSchoolCountChange = (count: number) => {
+    onChangeParams({
+      ...params,
+      schoolCount: count,
+    });
+  };
+
   const handleSliderChange = (key: keyof ScenarioParams, value: number) => {
     onChangeParams({
       ...params,
@@ -32,6 +43,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 
   return (
     <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-xl shadow-xl space-y-6">
+      {/* Title */}
       <div>
         <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
           <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -42,6 +54,66 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         <p className="text-xs text-slate-400 mt-1">
           Configure distribution parameters for rural geographic mapping.
         </p>
+      </div>
+
+      {/* Policy Switcher (High Visibility) */}
+      <div className="space-y-2">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-indigo-400">
+          Active Transport Policy
+        </label>
+        <div className="grid grid-cols-2 gap-2 bg-indigo-950/20 p-1.5 rounded-xl border border-indigo-900/30">
+          <button
+            type="button"
+            onClick={() => onPolicyChange('catchment')}
+            className={`py-2 px-3 rounded-lg text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+              transportPolicy === 'catchment'
+                ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-500/20'
+                : 'text-indigo-300/70 hover:text-indigo-200 hover:bg-indigo-950/40'
+            }`}
+          >
+            <span>Catchment School</span>
+            <span className="text-[9px] font-normal opacity-85">Polygons & Overlaps</span>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => onPolicyChange('nearest')}
+            className={`py-2 px-3 rounded-lg text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+              transportPolicy === 'nearest'
+                ? 'bg-gradient-to-r from-emerald-600 to-emerald-750 text-white shadow-md shadow-emerald-500/20'
+                : 'text-emerald-300/70 hover:text-emerald-200 hover:bg-emerald-950/40'
+            }`}
+          >
+            <span>Nearest School</span>
+            <span className="text-[9px] font-normal opacity-85">Straight Euclidean</span>
+          </button>
+        </div>
+      </div>
+
+      {/* School Count Picker */}
+      <div className="space-y-2">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Number of Schools
+        </label>
+        <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800/80">
+          {[1, 2].map((count) => {
+            const isActive = params.schoolCount === count;
+            return (
+              <button
+                key={count}
+                type="button"
+                onClick={() => handleSchoolCountChange(count)}
+                className={`py-1.5 px-3 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? 'bg-slate-850 text-white border border-slate-700/60 shadow-sm'
+                    : 'text-slate-450 hover:text-slate-200 hover:bg-slate-900'
+                }`}
+              >
+                {count} {count === 1 ? 'School' : 'Schools'}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Settlement Count Picker */}
@@ -57,10 +129,10 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 key={count}
                 type="button"
                 onClick={() => handleSettlementChange(count)}
-                className={`py-2 px-3 rounded-lg text-sm font-semibold tracking-wide transition-all duration-200 cursor-pointer ${
+                className={`py-1.5 px-2 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer ${
                   isActive
-                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/20'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                    ? 'bg-slate-850 text-white border border-slate-700/60 shadow-sm'
+                    : 'text-slate-455 hover:text-slate-200 hover:bg-slate-900'
                 }`}
               >
                 {count} {count === 1 ? 'Settlement' : 'Settlements'}
@@ -133,7 +205,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
                 <span className="text-slate-400 font-medium">Isolated Outliers</span>
-                <span className="text-coral-400 font-bold text-rose-400">{params.isolatedCount}</span>
+                <span className="text-rose-400 font-bold">{params.isolatedCount}</span>
               </div>
               <input
                 type="range"
@@ -161,9 +233,6 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 onChange={(e) => handleSliderChange('clusterRadius', parseInt(e.target.value))}
                 className="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500 border border-slate-800"
               />
-              <p className="text-[10px] text-slate-500">
-                Adjusts geographic spread around settlement centers (simulating village density).
-              </p>
             </div>
           </div>
         )}

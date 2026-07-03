@@ -3,27 +3,37 @@ import { Header } from './components/Header';
 import { ControlPanel } from './components/ControlPanel';
 import { GridCanvas } from './components/GridCanvas';
 import { StatsOverlay } from './components/StatsOverlay';
-import type { Household, SettlementCenter, ScenarioParams } from './types';
-import { generateScenario } from './utils/generator';
+import type { Household, SettlementCenter, ScenarioParams, School, TransportPolicy } from './types';
+import { generateScenario, assignHouseholds } from './utils/generator';
 
 function App() {
   // 1. Parameter State
   const [params, setParams] = useState<ScenarioParams>({
     settlementCount: 2,
+    schoolCount: 2,
     villageCount: 40,
     isolatedCount: 10,
     clusterRadius: 8,
   });
 
-  // 2. Scenario Data State
+  // 2. Active Transport Policy State
+  const [transportPolicy, setTransportPolicy] = useState<TransportPolicy>('catchment');
+
+  // 3. Scenario Data State
   const [households, setHouseholds] = useState<Household[]>([]);
   const [centers, setCenters] = useState<SettlementCenter[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
 
-  // 3. Scenario generator trigger
-  const handleGenerate = (currentParams = params) => {
-    const { households: newHouseholds, centers: newCenters } = generateScenario(currentParams);
-    setHouseholds(newHouseholds);
+  // 4. Scenario generator trigger
+  const handleGenerate = (currentParams = params, activePolicy = transportPolicy) => {
+    const { households: newHouseholds, centers: newCenters, schools: newSchools } = generateScenario(currentParams);
+    
+    // Apply assignments to the newly generated households
+    const assigned = assignHouseholds(newHouseholds, newSchools, activePolicy);
+    
+    setHouseholds(assigned);
     setCenters(newCenters);
+    setSchools(newSchools);
   };
 
   // Run scenario generator on initial load
@@ -34,27 +44,45 @@ function App() {
   // Sync parameter changes and trigger re-generation if counts change
   const handleChangeParams = (newParams: ScenarioParams) => {
     setParams(newParams);
-    // If user changed the settlement count, instantly regenerate to reflect selection
-    if (newParams.settlementCount !== params.settlementCount) {
+    
+    // If user changed counts, instantly regenerate to reflect selection
+    if (
+      newParams.settlementCount !== params.settlementCount ||
+      newParams.schoolCount !== params.schoolCount
+    ) {
       handleGenerate(newParams);
     }
   };
 
-  // 4. Export scenario data as JSON
+  // Recalculate assignments on existing points when the policy is toggled
+  const handlePolicyChange = (policy: TransportPolicy) => {
+    setTransportPolicy(policy);
+    setHouseholds((prev) => assignHouseholds(prev, schools, policy));
+  };
+
+  // 5. Export scenario data as JSON
   const handleExport = () => {
     const dataStr = JSON.stringify(
       {
         metadata: {
           generatedAt: new Date().toISOString(),
+          activePolicy: transportPolicy,
           parameters: params,
           summary: {
             totalHouseholds: households.length,
             villageHouseholds: households.filter(h => h.type === 'village').length,
             isolatedHouseholds: households.filter(h => h.type === 'isolated').length,
-            settlements: centers,
+            schools: schools.map(s => ({
+              id: s.id,
+              name: s.name,
+              x: s.x,
+              y: s.y,
+              vertexCount: s.polygon.length,
+            })),
           }
         },
         settlements: centers,
+        schools: schools,
         households: households,
       },
       null,
@@ -65,7 +93,7 @@ function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `stag-geographic-scenario-${params.settlementCount}-settlements.json`;
+    link.download = `stag-scenario-${params.schoolCount}-schools-${transportPolicy}-policy.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -80,7 +108,7 @@ function App() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
         {/* Analytics stats banner */}
-        <StatsOverlay households={households} centers={centers} />
+        <StatsOverlay households={households} centers={centers} schools={schools} />
 
         {/* Responsive Two-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -89,29 +117,28 @@ function App() {
             <ControlPanel
               params={params}
               onChangeParams={handleChangeParams}
+              transportPolicy={transportPolicy}
+              onPolicyChange={handlePolicyChange}
               onGenerate={() => handleGenerate()}
               onExport={handleExport}
             />
 
             {/* Context/Information block */}
             <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 text-xs text-slate-400 space-y-3">
-              <h3 className="font-bold text-slate-300 uppercase tracking-wider">Spatial Dispersion Context</h3>
+              <h3 className="font-bold text-slate-300 uppercase tracking-wider">Policy Comparison Framework</h3>
               <p>
-                Rural geographic layouts often present spatial logistics challenges. This tool generates
-                representative scenarios to demonstrate dispersion:
+                This visual mapping highlights the difference between local optimization policies:
               </p>
-              <ul className="list-disc list-inside space-y-1 text-slate-400">
+              <ul className="list-disc list-inside space-y-1.5 text-slate-450">
                 <li>
-                  <strong className="text-slate-350">Village cores</strong> mimic denser housing developments clustered
-                  around coordinates.
+                  <strong className="text-indigo-400 font-semibold">Catchment Policy</strong>: Restricts routing to administrative school boundaries. Points falling in the shared <span className="text-purple-400 font-semibold">Overlap Zone</span> are funneled to School A, and fallbacks are triggered for outliers outside both zones.
                 </li>
                 <li>
-                  <strong className="text-slate-350">Isolated outliers</strong> represent scattered farms or single dwellings.
+                  <strong className="text-emerald-400 font-semibold">Nearest Policy</strong>: Disregards boundaries, routing students to their closest destination to minimize transit time.
                 </li>
               </ul>
-              <p>
-                In the next phase, we will map transport vectors and school destinations to analyze route efficiency
-                across split community configurations.
+              <p className="pt-1 text-[11px] text-slate-500 border-t border-slate-800/60">
+                Observe the visual vectors shift in the overlap zones when toggling between policies.
               </p>
             </div>
           </div>
@@ -121,6 +148,7 @@ function App() {
             <GridCanvas
               households={households}
               centers={centers}
+              schools={schools}
               clusterRadius={params.clusterRadius}
             />
           </div>
