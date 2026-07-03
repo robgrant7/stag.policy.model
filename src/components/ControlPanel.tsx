@@ -179,7 +179,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               <div className="space-y-3">
                 {Array.from({ length: params.schoolCount }).map((_, index) => {
                   const SCHOOL_IDS = ['school-a', 'school-b', 'school-c', 'school-d', 'school-e', 'school-f'];
-                  const SCHOOL_NAMES = ['School Alpha (A)', 'School Beta (B)', 'School Gamma (C)', 'School Delta (D)', 'School Epsilon (E)', 'School Zeta (F)'];
+                  const SCHOOL_NAMES = ['School A', 'School B', 'School C', 'School D', 'School E', 'School F'];
                   const SCHOOL_COLORS = ['#3b82f6', '#ef4444', '#84cc16', '#a855f7', '#f97316', '#06b6d4'];
                   
                   const id = SCHOOL_IDS[index];
@@ -331,28 +331,28 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               </div>
               <input
                 type="range"
-                min="10"
-                max="100"
-                step="5"
+                min="50"
+                max="300"
+                step="10"
                 value={params.villageCount}
                 onChange={(e) => handleSliderChange('villageCount', parseInt(e.target.value))}
                 className="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500 border border-slate-800"
               />
             </div>
 
-            {/* Isolated Outlier Count Slider */}
+            {/* Isolated Outliers (% of Total) Slider */}
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-400 font-medium">Isolated Outliers</span>
-                <span className="text-rose-400 font-bold">{params.isolatedCount}</span>
+                <span className="text-slate-400 font-medium">Isolated Outliers (% of Total)</span>
+                <span className="text-rose-400 font-bold">{params.isolatedPercentage}% ({params.isolatedCount})</span>
               </div>
               <input
                 type="range"
                 min="0"
-                max="50"
-                step="2"
-                value={params.isolatedCount}
-                onChange={(e) => handleSliderChange('isolatedCount', parseInt(e.target.value))}
+                max="40"
+                step="5"
+                value={params.isolatedPercentage}
+                onChange={(e) => handleSliderChange('isolatedPercentage', parseInt(e.target.value))}
                 className="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500 border border-slate-800"
               />
             </div>

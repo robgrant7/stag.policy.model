@@ -145,81 +145,41 @@ export function isPointInPolygon(point: { x: number; y: number }, polygon: { x: 
  */
 export function generateSettlementCenters(count: number): SettlementCenter[] {
   const centers: SettlementCenter[] = [];
-  
-  if (count === 1) {
-    const x = 40 + Math.random() * 20;
-    const y = 40 + Math.random() * 20;
-    centers.push({
-      id: 'settlement-1',
-      name: CLUSTER_NAMES[0],
-      x: Math.round(x * 10) / 10,
-      y: Math.round(y * 10) / 10,
-      color: CLUSTER_COLORS[0],
-    });
-  } else if (count === 2) {
-    const ax = 15 + Math.random() * 20;
-    const ay = 20 + Math.random() * 60;
-    centers.push({
-      id: 'settlement-1',
-      name: CLUSTER_NAMES[0],
-      x: Math.round(ax * 10) / 10,
-      y: Math.round(ay * 10) / 10,
-      color: CLUSTER_COLORS[0],
-    });
+  const minDistance = 15; // Minimum distance buffer to prevent overlap
 
-    const bx = 65 + Math.random() * 20;
-    const by = 20 + Math.random() * 60;
-    centers.push({
-      id: 'settlement-2',
-      name: CLUSTER_NAMES[1],
-      x: Math.round(bx * 10) / 10,
-      y: Math.round(by * 10) / 10,
-      color: CLUSTER_COLORS[1],
-    });
-  } else if (count === 3) {
-    const ax = 10 + Math.random() * 15;
-    const ay = 20 + Math.random() * 60;
-    centers.push({
-      id: 'settlement-1',
-      name: CLUSTER_NAMES[0],
-      x: Math.round(ax * 10) / 10,
-      y: Math.round(ay * 10) / 10,
-      color: CLUSTER_COLORS[0],
-    });
+  for (let i = 0; i < count; i++) {
+    let bestX = 50;
+    let bestY = 50;
 
-    const bx = 45 + Math.random() * 10;
-    const by = 20 + Math.random() * 60;
-    centers.push({
-      id: 'settlement-2',
-      name: CLUSTER_NAMES[1],
-      x: Math.round(bx * 10) / 10,
-      y: Math.round(by * 10) / 10,
-      color: CLUSTER_COLORS[1],
-    });
+    for (let attempts = 0; attempts < 100; attempts++) {
+      // Wide range: X in [5, 95], Y in [10, 90]
+      const x = 5 + Math.random() * 90;
+      const y = 10 + Math.random() * 80;
 
-    const cx = 75 + Math.random() * 15;
-    const cy = 20 + Math.random() * 60;
-    centers.push({
-      id: 'settlement-3',
-      name: CLUSTER_NAMES[2],
-      x: Math.round(cx * 10) / 10,
-      y: Math.round(cy * 10) / 10,
-      color: CLUSTER_COLORS[2],
-    });
-  } else {
-    for (let i = 0; i < count; i++) {
-      const colWidth = 80 / count;
-      const sectorMin = 10 + i * colWidth;
-      const x = sectorMin + Math.random() * colWidth;
-      const y = 20 + Math.random() * 60;
-      centers.push({
-        id: `settlement-${i + 1}`,
-        name: CLUSTER_NAMES[i] || `Village ${i + 1}`,
-        x: Math.round(x * 10) / 10,
-        y: Math.round(y * 10) / 10,
-        color: CLUSTER_COLORS[i] || '#475569',
-      });
+      // Check distance to all existing centers
+      let ok = true;
+      for (const existing of centers) {
+        const d = getDistance(x, y, existing.x, existing.y);
+        if (d < minDistance) {
+          ok = false;
+          break;
+        }
+      }
+
+      if (ok || attempts === 99) {
+        bestX = x;
+        bestY = y;
+        break;
+      }
     }
+
+    centers.push({
+      id: `settlement-${i + 1}`,
+      name: CLUSTER_NAMES[i] || `Settlement ${i + 1}`,
+      x: Math.round(bestX * 10) / 10,
+      y: Math.round(bestY * 10) / 10,
+      color: CLUSTER_COLORS[i] || '#475569',
+    });
   }
   
   return centers;
@@ -267,43 +227,20 @@ export function generateCatchmentPolygon(cx: number, cy: number, baseRadius = 35
  */
 export function generateSchools(count: number): School[] {
   const schools: School[] = [];
-  const SCHOOL_NAMES = ['School Alpha', 'School Beta', 'School Gamma', 'School Delta', 'School Epsilon', 'School Zeta'];
+  const SCHOOL_NAMES = ['School A', 'School B', 'School C', 'School D', 'School E', 'School F'];
   const SCHOOL_COLORS = ['#3b82f6', '#ef4444', '#84cc16', '#a855f7', '#f97316', '#06b6d4'];
   const SCHOOL_IDS = ['school-a', 'school-b', 'school-c', 'school-d', 'school-e', 'school-f'] as const;
 
   for (let i = 0; i < count; i++) {
     let x = 50;
-    let y = 20 + Math.random() * 60;
-
-    if (count === 1) {
-      x = 40 + Math.random() * 20;
-      y = 40 + Math.random() * 20;
-    } else if (count === 2) {
-      x = i === 0 ? 15 + Math.random() * 20 : 65 + Math.random() * 20;
-    } else if (count === 3) {
-      if (i === 0) x = 10 + Math.random() * 15;
-      else if (i === 1) x = 45 + Math.random() * 10;
-      else x = 75 + Math.random() * 15;
-    } else if (count === 4) {
-      if (i === 0) x = 10 + Math.random() * 10;
-      else if (i === 1) x = 35 + Math.random() * 10;
-      else if (i === 2) x = 60 + Math.random() * 10;
-      else x = 80 + Math.random() * 10;
-    } else if (count === 5) {
-      if (i === 0) x = 5 + Math.random() * 10;
-      else if (i === 1) x = 25 + Math.random() * 10;
-      else if (i === 2) x = 45 + Math.random() * 10;
-      else if (i === 3) x = 65 + Math.random() * 10;
-      else x = 85 + Math.random() * 10;
+    if (count > 1) {
+      const defaultX = 10 + (i * 80) / (count - 1);
+      const offset = -4 + Math.random() * 8; // slight randomized offset
+      x = Math.max(5, Math.min(95, defaultX + offset));
     } else {
-      // 6 schools
-      if (i === 0) x = 5 + Math.random() * 7;
-      else if (i === 1) x = 20 + Math.random() * 8;
-      else if (i === 2) x = 36 + Math.random() * 8;
-      else if (i === 3) x = 52 + Math.random() * 8;
-      else if (i === 4) x = 68 + Math.random() * 8;
-      else x = 84 + Math.random() * 8;
+      x = 40 + Math.random() * 20;
     }
+    const y = 20 + Math.random() * 60;
 
     schools.push({
       id: SCHOOL_IDS[i],

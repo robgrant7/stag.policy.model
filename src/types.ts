@@ -32,5 +32,6 @@ export interface ScenarioParams {
   schoolCount: number;     // 1 to 6
   villageCount: number;    // default 40
   isolatedCount: number;   // default 10
+  isolatedPercentage: number; // default 15%
   clusterRadius: number;   // default 8
 }

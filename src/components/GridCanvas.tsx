@@ -107,7 +107,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
       <div className="flex-1 w-full flex items-center justify-center p-6 md:p-8 select-none">
         
         {/* Aspect Ratio Box (Square 1:1) */}
-        <div className="w-full h-full max-w-[85vh] max-h-[85vh] aspect-square border border-slate-800 relative bg-slate-950 shadow-2xl">
+        <div className="w-full h-full max-w-[90vw] max-h-[90vh] aspect-square border border-slate-800 relative bg-slate-950 shadow-2xl flex items-center justify-center">
           
           {/* Grid Lines */}
           {ticks.map((tick) => (
@@ -171,46 +171,62 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
               );
             })}
 
-            {/* 2. Visual Vectors (Lines from Students to Assigned Schools) */}
-            {filteredHouseholds.map((h) => {
-              if (!h.assignedSchoolId) return null;
-              const school = schools.find((s) => s.id === h.assignedSchoolId);
-              if (!school) return null;
-              
-              const isHovered = hoveredPoint && hoveredPoint.id === h.id;
-              
-              return (
-                <line
-                  key={`vector-${h.id}`}
-                  x1={h.x}
-                  y1={100 - h.y}
-                  x2={school.x}
-                  y2={100 - school.y}
-                  stroke={school.color}
-                  strokeWidth={isHovered ? '0.6' : '0.2'}
-                  strokeOpacity={isHovered ? '0.75' : '0.22'}
-                  strokeDasharray="0.8,0.8"
-                  className="transition-all duration-150 ease-out"
-                />
-              );
+            {/* 2. Aggregated Route Trunks (Lines from Settlement Centers to Assigned Schools) */}
+            {centers.map((center) => {
+              const settlementHouseholds = households.filter((h) => h.settlementId === center.id);
+              const routeCounts: Record<string, number> = {};
+              settlementHouseholds.forEach((h) => {
+                if (h.assignedSchoolId) {
+                  routeCounts[h.assignedSchoolId] = (routeCounts[h.assignedSchoolId] || 0) + 1;
+                }
+              });
+
+              return Object.entries(routeCounts).map(([schoolId, count]) => {
+                if (count === 0) return null;
+                const school = schools.find((s) => s.id === schoolId);
+                if (!school) return null;
+
+                const isHovered = hoveredPoint && hoveredPoint.id === center.id;
+                const thickness = 0.4 + Math.sqrt(count) * 0.4;
+
+                return (
+                  <line
+                    key={`trunk-${center.id}-${schoolId}`}
+                    x1={center.x}
+                    y1={100 - center.y}
+                    x2={school.x}
+                    y2={100 - school.y}
+                    stroke={school.color}
+                    strokeWidth={isHovered ? thickness * 1.3 : thickness}
+                    strokeOpacity={isHovered ? 0.75 : 0.4}
+                    strokeLinecap="round"
+                    strokeDasharray={isHovered ? undefined : '2,2'}
+                    className="transition-all duration-300"
+                  />
+                );
+              });
             })}
           </svg>
 
-          {/* Settlement Cluster Radius Rings (Faint overlays) */}
-          {centers.map((center) => (
-            <div
-              key={`ring-${center.id}`}
-              className="absolute border border-dashed rounded-full pointer-events-none transition-all duration-300 ease-out"
-              style={{
-                width: `${clusterRadius * 2}%`,
-                height: `${clusterRadius * 2}%`,
-                left: `${center.x - clusterRadius}%`,
-                bottom: `${center.y - clusterRadius}%`,
-                borderColor: `${center.color}20`,
-                backgroundColor: `${center.color}02`,
-              }}
-            />
-          ))}
+          {/* Settlement Cluster Radius Rings (Faint overlays, scaled by final village headcount) */}
+          {centers.map((center) => {
+            const headcount = households.filter((h) => h.settlementId === center.id).length;
+            const localRadius = clusterRadius * Math.sqrt(headcount / 15);
+            return (
+              <div
+                key={`ring-${center.id}`}
+                className="absolute border border-dashed rounded-full pointer-events-none transition-all duration-300 ease-out"
+                style={{
+                  width: `${localRadius * 2}%`,
+                  height: `${localRadius * 2}%`,
+                  left: `${center.x - localRadius}%`,
+                  bottom: `${center.y - localRadius}%`,
+                  borderColor: `${center.color}20`,
+                  backgroundColor: `${center.color}02`,
+                }}
+              />
+            );
+          })}
 
           {/* Settlement Centers */}
           {centers.map((center) => (

@@ -11,8 +11,9 @@ function App() {
   const [params, setParams] = useState<ScenarioParams>({
     settlementCount: 4,
     schoolCount: 3,
-    villageCount: 45,
-    isolatedCount: 10,
+    villageCount: 180,
+    isolatedPercentage: 15,
+    isolatedCount: 32,
     clusterRadius: 8,
   });
 
@@ -74,6 +75,16 @@ function App() {
 
   // Sync parameter changes and trigger re-generation if counts change
   const handleChangeParams = (newParams: ScenarioParams) => {
+    // If isolatedPercentage or villageCount changed, recalculate isolatedCount dynamically
+    if (
+      newParams.isolatedPercentage !== params.isolatedPercentage ||
+      newParams.villageCount !== params.villageCount
+    ) {
+      const pct = newParams.isolatedPercentage;
+      const total = pct >= 100 ? newParams.villageCount : Math.round(newParams.villageCount / (1 - pct / 100));
+      newParams.isolatedCount = Math.round(total * (pct / 100));
+    }
+    
     setParams(newParams);
     
     // If user changed counts, instantly regenerate to reflect selection
