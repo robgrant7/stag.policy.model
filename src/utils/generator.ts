@@ -537,3 +537,118 @@ export function generateScenario(params: ScenarioParams): {
     schools,
   };
 }
+
+export interface FinancialReport {
+  catchmentCost: number;
+  nearestCost: number;
+  activeCost: number;
+  deficit: number;
+  splits: {
+    centerId: string;
+    centerName: string;
+    totalStudents: number;
+    fragmentedCount: number;
+    distribution: { schoolId: string; count: number }[];
+  }[];
+}
+
+/**
+ * Calculates daily transport operational costs and detects village splits
+ */
+export function calculateFinancials(
+  households: Household[],
+  centers: SettlementCenter[],
+  activePolicy: TransportPolicy
+): FinancialReport {
+  const totalStudents = households.length;
+  const catchmentCost = totalStudents * 10;
+
+  // 1. Group households by cohort
+  const villageCohorts: Record<string, Household[]> = {};
+  const isolatedCohort: Household[] = [];
+
+  households.forEach((h) => {
+    if (h.type === 'village' && h.settlementId) {
+      if (!villageCohorts[h.settlementId]) {
+        villageCohorts[h.settlementId] = [];
+      }
+      villageCohorts[h.settlementId].push(h);
+    } else {
+      isolatedCohort.push(h);
+    }
+  });
+
+  let nearestCost = 0;
+  const splits: FinancialReport['splits'] = [];
+
+  // 2. Helper to calculate cost for a cohort
+  const calculateCohortCost = (cohortHouseholds: Household[], centerId?: string) => {
+    const counts: Record<string, number> = {
+      'school-a': 0,
+      'school-b': 0,
+      'school-c': 0,
+    };
+
+    cohortHouseholds.forEach((h) => {
+      if (h.assignedSchoolId) {
+        counts[h.assignedSchoolId] = (counts[h.assignedSchoolId] || 0) + 1;
+      }
+    });
+
+    let cohortCost = 0;
+    const distribution: { schoolId: string; count: number }[] = [];
+
+    Object.keys(counts).forEach((schoolId) => {
+      const headcount = counts[schoolId];
+      if (headcount > 0) {
+        distribution.push({ schoolId, count: headcount });
+        if (headcount > 16) {
+          cohortCost += headcount * 10;
+        } else {
+          cohortCost += headcount * 25;
+        }
+      }
+    });
+
+    // Check splits for village cohorts
+    if (centerId) {
+      const center = centers.find((c) => c.id === centerId);
+      const activeDestinations = distribution.filter((d) => d.count > 0);
+      
+      if (activeDestinations.length > 1) {
+        const sortedDests = [...activeDestinations].sort((a, b) => b.count - a.count);
+        const majorityDest = sortedDests[0];
+        const fragmentedCount = cohortHouseholds.length - majorityDest.count;
+        
+        splits.push({
+          centerId,
+          centerName: center ? center.name : `Village ${centerId}`,
+          totalStudents: cohortHouseholds.length,
+          fragmentedCount,
+          distribution,
+        });
+      }
+    }
+
+    return cohortCost;
+  };
+
+  // Calculate village cohort costs
+  Object.keys(villageCohorts).forEach((centerId) => {
+    nearestCost += calculateCohortCost(villageCohorts[centerId], centerId);
+  });
+
+  // Calculate isolated cohort cost
+  nearestCost += calculateCohortCost(isolatedCohort);
+
+  const activeCost = activePolicy === 'catchment' ? catchmentCost : nearestCost;
+  const deficit = nearestCost - catchmentCost;
+
+  return {
+    catchmentCost,
+    nearestCost,
+    activeCost,
+    deficit,
+    splits,
+  };
+}

@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Header } from './components/Header';
 import { ControlPanel } from './components/ControlPanel';
 import { GridCanvas } from './components/GridCanvas';
 import { StatsOverlay } from './components/StatsOverlay';
+import { FinancialPanel } from './components/FinancialPanel';
 import type { Household, SettlementCenter, ScenarioParams, School, TransportPolicy } from './types';
-import { generateScenario, assignHouseholds } from './utils/generator';
+import { generateScenario, assignHouseholds, calculateFinancials } from './utils/generator';
 
 function App() {
   // 1. Parameter State
@@ -27,6 +28,11 @@ function App() {
   const [households, setHouseholds] = useState<Household[]>([]);
   const [centers, setCenters] = useState<SettlementCenter[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
+
+  // 3.5. Reactive Transport Operational Cost calculations
+  const financials = useMemo(() => {
+    return calculateFinancials(households, centers, transportPolicy);
+  }, [households, centers, transportPolicy]);
 
   // 4. Scenario generator trigger
   const handleGenerate = (
@@ -151,6 +157,11 @@ function App() {
               onLegacyPreferenceChange={handleLegacyPreferenceChange}
               onGenerate={() => handleGenerate(params, transportPolicy, overlapRule, legacyPreference)}
               onExport={handleExport}
+            />
+
+            <FinancialPanel
+              financials={financials}
+              activePolicy={transportPolicy}
             />
 
             {/* Context/Information block */}
