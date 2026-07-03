@@ -9,7 +9,7 @@ import { generateScenario, assignHouseholds, calculateFinancials } from './utils
 function App() {
   // 1. Parameter State
   const [params, setParams] = useState<ScenarioParams>({
-    settlementCount: 3,
+    settlementCount: 4,
     schoolCount: 3,
     villageCount: 45,
     isolatedCount: 10,

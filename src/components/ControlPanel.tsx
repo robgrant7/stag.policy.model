@@ -234,8 +234,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
           Number of Schools
         </label>
-        <div className="grid grid-cols-6 gap-1 bg-slate-950 p-1.5 rounded-xl border border-slate-800/80">
-          {[1, 2, 3, 4, 5, 6].map((count) => {
+        <div className="grid grid-cols-3 gap-1 bg-slate-950 p-1.5 rounded-xl border border-slate-800/80">
+          {[1, 2, 3].map((count) => {
             const isActive = params.schoolCount === count;
             return (
               <button
@@ -245,7 +245,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 className={`py-1.5 px-3 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer ${
                   isActive
                     ? 'bg-slate-850 text-white border border-slate-700/60 shadow-sm'
-                    : 'text-slate-450 hover:text-slate-200 hover:bg-slate-900'
+                    : 'text-slate-455 hover:text-slate-200 hover:bg-slate-900'
                 }`}
               >
                 {count}
@@ -260,8 +260,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
           Number of Settlements
         </label>
-        <div className="grid grid-cols-3 gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800/80">
-          {[1, 2, 3].map((count) => {
+        <div className="grid grid-cols-6 gap-1 bg-slate-950 p-1.5 rounded-xl border border-slate-800/80">
+          {[1, 2, 3, 4, 5, 6].map((count) => {
             const isActive = params.settlementCount === count;
             return (
               <button
@@ -274,7 +274,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                     : 'text-slate-455 hover:text-slate-200 hover:bg-slate-900'
                 }`}
               >
-                {count} {count === 1 ? 'Settlement' : 'Settlements'}
+                {count}
               </button>
             );
           })}

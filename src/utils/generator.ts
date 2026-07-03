@@ -5,9 +5,19 @@ const CLUSTER_COLORS = [
   '#10b981', // Emerald/Green (Settlement A)
   '#8b5cf6', // Violet/Purple (Settlement B)
   '#f59e0b', // Amber/Yellow (Settlement C)
+  '#ec4899', // Pink (Settlement D)
+  '#06b6d4', // Cyan (Settlement E)
+  '#f97316', // Orange (Settlement F)
 ];
 
-const CLUSTER_NAMES = ['Settlement Alpha', 'Settlement Beta', 'Settlement Gamma'];
+const CLUSTER_NAMES = [
+  'Settlement Alpha',
+  'Settlement Beta',
+  'Settlement Gamma',
+  'Settlement Delta',
+  'Settlement Epsilon',
+  'Settlement Zeta'
+];
 
 /**
  * Calculates Euclidean distance between two points
@@ -137,7 +147,6 @@ export function generateSettlementCenters(count: number): SettlementCenter[] {
   const centers: SettlementCenter[] = [];
   
   if (count === 1) {
-    // 1 Center (Central: X: 40-60, Y: 40-60)
     const x = 40 + Math.random() * 20;
     const y = 40 + Math.random() * 20;
     centers.push({
@@ -148,7 +157,6 @@ export function generateSettlementCenters(count: number): SettlementCenter[] {
       color: CLUSTER_COLORS[0],
     });
   } else if (count === 2) {
-    // Center 1 (Left: X: 15-35, Y: 20-80)
     const ax = 15 + Math.random() * 20;
     const ay = 20 + Math.random() * 60;
     centers.push({
@@ -159,7 +167,6 @@ export function generateSettlementCenters(count: number): SettlementCenter[] {
       color: CLUSTER_COLORS[0],
     });
 
-    // Center 2 (Right: X: 65-85, Y: 20-80)
     const bx = 65 + Math.random() * 20;
     const by = 20 + Math.random() * 60;
     centers.push({
@@ -169,9 +176,7 @@ export function generateSettlementCenters(count: number): SettlementCenter[] {
       y: Math.round(by * 10) / 10,
       color: CLUSTER_COLORS[1],
     });
-  } else {
-    // 3 Centers
-    // Center 1 (Left: X: 10-25, Y: 20-80)
+  } else if (count === 3) {
     const ax = 10 + Math.random() * 15;
     const ay = 20 + Math.random() * 60;
     centers.push({
@@ -182,7 +187,6 @@ export function generateSettlementCenters(count: number): SettlementCenter[] {
       color: CLUSTER_COLORS[0],
     });
 
-    // Center 2 (Middle: X: 45-55, Y: 20-80)
     const bx = 45 + Math.random() * 10;
     const by = 20 + Math.random() * 60;
     centers.push({
@@ -193,7 +197,6 @@ export function generateSettlementCenters(count: number): SettlementCenter[] {
       color: CLUSTER_COLORS[1],
     });
 
-    // Center 3 (Right: X: 75-90, Y: 20-80)
     const cx = 75 + Math.random() * 15;
     const cy = 20 + Math.random() * 60;
     centers.push({
@@ -203,6 +206,20 @@ export function generateSettlementCenters(count: number): SettlementCenter[] {
       y: Math.round(cy * 10) / 10,
       color: CLUSTER_COLORS[2],
     });
+  } else {
+    for (let i = 0; i < count; i++) {
+      const colWidth = 80 / count;
+      const sectorMin = 10 + i * colWidth;
+      const x = sectorMin + Math.random() * colWidth;
+      const y = 20 + Math.random() * 60;
+      centers.push({
+        id: `settlement-${i + 1}`,
+        name: CLUSTER_NAMES[i] || `Village ${i + 1}`,
+        x: Math.round(x * 10) / 10,
+        y: Math.round(y * 10) / 10,
+        color: CLUSTER_COLORS[i] || '#475569',
+      });
+    }
   }
   
   return centers;
@@ -331,38 +348,16 @@ export function getDistanceToSegment(px: number, py: number, ax: number, ay: num
 }
 
 /**
- * Checks if a point lies in the organic Voronoi overlap corridor (within 6 units of any inner edge)
+ * Checks if a point lies in the organic Voronoi overlap corridor (falls inside > 1 expanded polygons)
  */
 export function isPointInOverlap(
   px: number,
   py: number,
-  schools: School[],
-  buffer = 6
+  schools: School[]
 ): boolean {
-  for (const school of schools) {
-    const poly = school.polygon;
-    if (!poly || poly.length < 3) continue;
-    
-    for (let i = 0; i < poly.length; i++) {
-      const A = poly[i];
-      const B = poly[(i + 1) % poly.length];
-      
-      const ax = A.x, ay = A.y, bx = B.x, by = B.y;
-      const isBoundary = 
-        (Math.abs(ax) < 0.2 && Math.abs(bx) < 0.2) ||
-        (Math.abs(ax - 100) < 0.2 && Math.abs(bx - 100) < 0.2) ||
-        (Math.abs(ay) < 0.2 && Math.abs(by) < 0.2) ||
-        (Math.abs(ay - 100) < 0.2 && Math.abs(by - 100) < 0.2);
-        
-      if (!isBoundary) {
-        const dist = getDistanceToSegment(px, py, ax, ay, bx, by);
-        if (dist <= buffer) {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
+  const point = { x: px, y: py };
+  const containing = schools.filter((s) => isPointInPolygon(point, s.polygon));
+  return containing.length > 1;
 }
 
 /**
@@ -414,8 +409,9 @@ export function assignHouseholds(
     }
 
     // policy === 'catchment'
-    // Determine if student is in the organic overlap corridor
-    const inOverlap = isPointInOverlap(h.x, h.y, schools, 6);
+    // Find all schools whose expanded polygon contains the student
+    const containingSchools = schools.filter((s) => isPointInPolygon(h, s.polygon));
+    const inOverlap = containingSchools.length > 1;
 
     let assignedSchoolId: string;
 
@@ -425,8 +421,8 @@ export function assignHouseholds(
         if (h.type === 'village' && h.settlementId) {
           const center = centers.find((c) => c.id === h.settlementId);
           if (center) {
-            // Find school closest to settlement center (Euclidean)
-            const sortedCentDist = schools.map((s) => ({
+            // Find school closest to settlement center (Euclidean) among containing schools
+            const sortedCentDist = containingSchools.map((s) => ({
               id: s.id,
               dist: getDistance(center.x, center.y, s.x, s.y),
             })).sort((a, b) => a.dist - b.dist);
@@ -444,8 +440,8 @@ export function assignHouseholds(
           const score = getDeterministicScore(h.id);
           assignedSchoolId = score < legacySplit.a ? 'school-a' : 'school-b';
         } else {
-          // 3+ schools: Attractiveness utility-based split
-          const utilities = schools.map((s) => {
+          // 3 schools: Attractiveness utility-based split among containing schools
+          const utilities = containingSchools.map((s) => {
             const dist = getDistance(h.x, h.y, s.x, s.y);
             const distTerm = dist > 0.1 ? 1.0 / dist : 10.0;
             const attr = attractiveness[s.id] ?? 0.0;
@@ -458,7 +454,7 @@ export function assignHouseholds(
           if (sumUtility > 0) {
             const score = getDeterministicScore(h.id);
             let accum = 0;
-            let assignedId = schools[0].id;
+            let assignedId = containingSchools[0].id;
             
             for (let k = 0; k < utilities.length; k++) {
               const prob = (utilities[k].utility / sumUtility) * 100;
@@ -474,8 +470,11 @@ export function assignHouseholds(
           }
         }
       }
+    } else if (containingSchools.length === 1) {
+      // Exclusive Zone: strictly locked to that single catchment school
+      assignedSchoolId = containingSchools[0].id;
     } else {
-      // Exclusive Zone
+      // Fallback
       assignedSchoolId = closestWeightedSchoolId;
     }
 
@@ -554,38 +553,21 @@ export function generateScenario(params: ScenarioParams): {
   const households: Household[] = [];
 
   // 2. Generate village households clustered around centers
-  centers.forEach((center, index) => {
-    let countForThisCenter = 0;
-    let localRadius = clusterRadius;
+  const SETTLEMENT_WEIGHTS: Record<number, number[]> = {
+    1: [45],
+    2: [30, 15],
+    3: [25, 13, 7],
+    4: [22, 12, 7, 4],
+    5: [20, 12, 7, 4, 2],
+    6: [18, 11, 7, 5, 3, 1],
+  };
 
-    if (settlementCount === 1) {
-      countForThisCenter = villageCount;
-      localRadius = clusterRadius * 1.25;
-    } else if (settlementCount === 2) {
-      if (index === 0) {
-        countForThisCenter = Math.round(villageCount * (30 / 45));
-        localRadius = clusterRadius * 1.15;
-      } else {
-        const count1 = Math.round(villageCount * (30 / 45));
-        countForThisCenter = villageCount - count1;
-        localRadius = clusterRadius * 0.75;
-      }
-    } else {
-      // 3 settlements
-      const count1 = Math.round(villageCount * (25 / 45));
-      const count2 = Math.round(villageCount * (13 / 45));
-      
-      if (index === 0) {
-        countForThisCenter = count1;
-        localRadius = clusterRadius * 1.1;
-      } else if (index === 1) {
-        countForThisCenter = count2;
-        localRadius = clusterRadius * 0.8;
-      } else {
-        countForThisCenter = villageCount - count1 - count2;
-        localRadius = clusterRadius * 0.5;
-      }
-    }
+  const weights = SETTLEMENT_WEIGHTS[settlementCount] || [45];
+
+  centers.forEach((center, index) => {
+    const weight = weights[index] ?? 1;
+    const countForThisCenter = Math.round(villageCount * (weight / 45));
+    const localRadius = clusterRadius * Math.sqrt(weight / 15);
 
     for (let i = 0; i < countForThisCenter; i++) {
       const theta = Math.random() * 2 * Math.PI;
@@ -685,8 +667,9 @@ export function generateScenario(params: ScenarioParams): {
           }
         }
         
-        const finalX = school.x + low * Math.cos(theta);
-        const finalY = school.y + low * Math.sin(theta);
+        const finalRadius = low + 8; // expand outward uniformly by +8 coordinate units
+        const finalX = Math.max(0, Math.min(100, school.x + finalRadius * Math.cos(theta)));
+        const finalY = Math.max(0, Math.min(100, school.y + finalRadius * Math.sin(theta)));
         polygon.push({
           x: Math.round(finalX * 10) / 10,
           y: Math.round(finalY * 10) / 10,
