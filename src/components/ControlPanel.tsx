@@ -10,6 +10,8 @@ interface ControlPanelProps {
   onOverlapRuleChange: (rule: 'community' | 'legacy_slider') => void;
   legacySplit: { a: number; b: number; c: number };
   onLegacySplitChange: (split: { a: number; b: number; c: number }) => void;
+  attractiveness: Record<string, number>;
+  onAttractivenessChange: (attr: Record<string, number>) => void;
   onGenerate: () => void;
   onExport: () => void;
 }
@@ -23,6 +25,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   onOverlapRuleChange,
   legacySplit,
   onLegacySplitChange,
+  attractiveness,
+  onAttractivenessChange,
   onGenerate,
   onExport,
 }) => {
@@ -51,56 +55,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 
 
 
-  const svgRef = React.useRef<SVGSVGElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    setIsDragging(true);
-    e.currentTarget.setPointerCapture(e.pointerId);
-    updateFromPointer(e);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (isDragging) {
-      updateFromPointer(e);
-    }
-  };
-
-  const handlePointerUp = (e: React.PointerEvent) => {
-    setIsDragging(false);
-    e.currentTarget.releasePointerCapture(e.pointerId);
-  };
-
-  const updateFromPointer = (e: React.PointerEvent) => {
-    if (!svgRef.current) return;
-    const rect = svgRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 200;
-    const y = ((e.clientY - rect.top) / rect.height) * 170;
-
-    const tA = (130 - y) / 110;
-    const tB = (110 * (x - 170) - 70 * (y - 130)) / -15400;
-    const tC = 1 - tA - tB;
-
-    const clampedA = Math.max(0, Math.min(1, tA));
-    const clampedB = Math.max(0, Math.min(1, tB));
-    const clampedC = Math.max(0, Math.min(1, tC));
-    const sum = clampedA + clampedB + clampedC;
-
-    const normA = sum > 0 ? clampedA / sum : 1/3;
-    const normB = sum > 0 ? clampedB / sum : 1/3;
-
-    const pctA = Math.round(normA * 100);
-    const pctB = Math.round(normB * 100);
-    const pctC = 100 - pctA - pctB;
-
-    onLegacySplitChange({ a: pctA, b: pctB, c: pctC });
-  };
-
-  const tA = legacySplit.a / 100;
-  const tB = legacySplit.b / 100;
-  const tC = legacySplit.c / 100;
-  const handleX = tA * 100 + tB * 30 + tC * 170;
-  const handleY = tA * 20 + tB * 130 + tC * 130;
 
   return (
     <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-xl shadow-xl space-y-6">
@@ -212,61 +167,56 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             </div>
           )}
 
-          {overlapRule === 'legacy_slider' && params.schoolCount === 3 && (
+          {overlapRule === 'legacy_slider' && params.schoolCount >= 3 && (
             <div className="space-y-4 pt-1 animate-fadeIn bg-slate-950/40 border border-slate-850 p-4 rounded-xl">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-350 uppercase tracking-wider">3-Way Legacy Split</span>
-                <span className="text-[10px] text-slate-500 font-bold bg-slate-900 px-2 py-0.5 rounded-full border border-slate-800">
-                  Interactive Triangle
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Attractiveness Sliders</span>
+                <span className="text-[10px] text-indigo-400 font-bold bg-indigo-950/30 px-2 py-0.5 rounded-full border border-indigo-900/40">
+                  Utility Multiplier
                 </span>
               </div>
-
-              <div className="flex justify-center">
-                <svg
-                  ref={svgRef}
-                  className="w-full max-w-[200px] aspect-[200/170] select-none touch-none"
-                  viewBox="0 0 200 170"
-                  onPointerDown={handlePointerDown}
-                  onPointerMove={handlePointerMove}
-                  onPointerUp={handlePointerUp}
-                >
-                  {/* Background Triangle */}
-                  <polygon
-                    points="100,20 30,130 170,130"
-                    fill="#090d16"
-                    stroke="#334155"
-                    strokeWidth="1.5"
-                  />
-
-                  {/* Barycentric gridlines connecting vertices to handle */}
-                  <line x1="100" y1="20" x2={handleX} y2={handleY} stroke="#3b82f6" strokeWidth="1" strokeDasharray="2,2" opacity="0.6" />
-                  <line x1="30" y1="130" x2={handleX} y2={handleY} stroke="#ef4444" strokeWidth="1" strokeDasharray="2,2" opacity="0.6" />
-                  <line x1="170" y1="130" x2={handleX} y2={handleY} stroke="#84cc16" strokeWidth="1" strokeDasharray="2,2" opacity="0.6" />
-
-                  {/* Vertex Pins */}
-                  <circle cx="100" cy="20" r="3.5" fill="#3b82f6" />
-                  <circle cx="30" cy="130" r="3.5" fill="#ef4444" />
-                  <circle cx="170" cy="130" r="3.5" fill="#84cc16" />
-
-                  {/* Vertex Text Labels */}
-                  <text x="100" y="13" textAnchor="middle" fill="#3b82f6" className="text-[9px] font-black uppercase tracking-wider">A: {legacySplit.a}%</text>
-                  <text x="30" y="143" textAnchor="middle" fill="#ef4444" className="text-[9px] font-black uppercase tracking-wider">B: {legacySplit.b}%</text>
-                  <text x="170" y="143" textAnchor="middle" fill="#84cc16" className="text-[9px] font-black uppercase tracking-wider">C: {legacySplit.c}%</text>
-
-                  {/* Draggable Selector Handle */}
-                  <circle
-                    cx={handleX}
-                    cy={handleY}
-                    r="6.5"
-                    fill="#ffffff"
-                    stroke="#4f46e5"
-                    strokeWidth="2.5"
-                    className="cursor-pointer transition-shadow shadow-md"
-                  />
-                </svg>
+              
+              <div className="space-y-3">
+                {Array.from({ length: params.schoolCount }).map((_, index) => {
+                  const SCHOOL_IDS = ['school-a', 'school-b', 'school-c', 'school-d', 'school-e', 'school-f'];
+                  const SCHOOL_NAMES = ['School Alpha (A)', 'School Beta (B)', 'School Gamma (C)', 'School Delta (D)', 'School Epsilon (E)', 'School Zeta (F)'];
+                  const SCHOOL_COLORS = ['#3b82f6', '#ef4444', '#84cc16', '#a855f7', '#f97316', '#06b6d4'];
+                  
+                  const id = SCHOOL_IDS[index];
+                  const name = SCHOOL_NAMES[index];
+                  const color = SCHOOL_COLORS[index];
+                  const val = attractiveness[id] ?? 0.0;
+                  
+                  return (
+                    <div key={id} className="space-y-1">
+                      <div className="flex justify-between text-[10px] items-center">
+                        <span className="font-semibold" style={{ color }}>{name}</span>
+                        <span className="font-black px-1.5 py-0.2 bg-slate-900 border border-slate-800 rounded text-[9px]" style={{ color }}>
+                          {val >= 0 ? `+${val.toFixed(1)}` : val.toFixed(1)}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-1.0"
+                        max="1.0"
+                        step="0.1"
+                        value={val}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value);
+                          onAttractivenessChange({
+                            ...attractiveness,
+                            [id]: value
+                          });
+                        }}
+                        className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer border border-slate-850"
+                        style={{ accentColor: color }}
+                      />
+                    </div>
+                  );
+                })}
               </div>
-              <p className="text-[9px] text-slate-500 leading-tight text-center">
-                Drag the white handle dot to partition the dual-catchment overlap allocations dynamically.
+              <p className="text-[8.5px] text-slate-500 leading-tight">
+                {"* Attractiveness alters pupil routing utility: \\(Utility = \\frac{1.0 + Attractiveness}{Distance}\\) strictly in overlap corridors."}
               </p>
             </div>
           )}
@@ -284,8 +234,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
           Number of Schools
         </label>
-        <div className="grid grid-cols-3 gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800/80">
-          {[1, 2, 3].map((count) => {
+        <div className="grid grid-cols-6 gap-1 bg-slate-950 p-1.5 rounded-xl border border-slate-800/80">
+          {[1, 2, 3, 4, 5, 6].map((count) => {
             const isActive = params.schoolCount === count;
             return (
               <button
@@ -298,7 +248,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                     : 'text-slate-450 hover:text-slate-200 hover:bg-slate-900'
                 }`}
               >
-                {count} {count === 1 ? 'School' : 'Schools'}
+                {count}
               </button>
             );
           })}

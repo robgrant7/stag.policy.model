@@ -15,16 +15,14 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
   clusterRadius,
 }) => {
   const [hoveredPoint, setHoveredPoint] = useState<Household | SettlementCenter | School | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'village' | 'isolated' | 'school-a' | 'school-b' | 'school-c'>('all');
+  const [filterType, setFilterType] = useState<string>('all');
   const [selectedSettlementFilter, setSelectedSettlementFilter] = useState<string | null>(null);
 
   // Filter households based on legend clicks
   const filteredHouseholds = households.filter((h) => {
     if (filterType === 'isolated' && h.type !== 'isolated') return false;
     if (filterType === 'village' && h.type !== 'village') return false;
-    if (filterType === 'school-a' && h.assignedSchoolId !== 'school-a') return false;
-    if (filterType === 'school-b' && h.assignedSchoolId !== 'school-b') return false;
-    if (filterType === 'school-c' && h.assignedSchoolId !== 'school-c') return false;
+    if (filterType.startsWith('school-') && h.assignedSchoolId !== filterType) return false;
     if (h.type === 'village' && selectedSettlementFilter && h.settlementId !== selectedSettlementFilter) {
       return false;
     }
@@ -164,19 +162,47 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                 <polygon
                   key={`poly-${school.id}`}
                   points={pointsStr}
-                  fill={
-                    school.id === 'school-a'
-                      ? 'rgba(59, 130, 246, 0.1)'
-                      : school.id === 'school-b'
-                      ? 'rgba(239, 68, 68, 0.1)'
-                      : 'rgba(132, 204, 22, 0.12)' // Translucent green/yellow for School Gamma
-                  }
+                  fill={`${school.color}10`}
                   stroke={school.color}
                   strokeWidth="0.4"
                   strokeDasharray="2,2"
                   className="transition-all duration-300"
                 />
               );
+            })}
+
+            {/* 1.5. Variable Overlap Border Corridors (glow lines along inner Voronoi edges) */}
+            {schools.map((school) => {
+              const poly = school.polygon;
+              if (!poly || poly.length < 3) return null;
+              
+              return poly.map((A, i) => {
+                const B = poly[(i + 1) % poly.length];
+                const ax = A.x, ay = A.y, bx = B.x, by = B.y;
+                
+                // Determine if segment AB is an inner edge (not on the grid boundary X=0,100 or Y=0,100)
+                const isBoundary = 
+                  (Math.abs(ax) < 0.2 && Math.abs(bx) < 0.2) ||
+                  (Math.abs(ax - 100) < 0.2 && Math.abs(bx - 100) < 0.2) ||
+                  (Math.abs(ay) < 0.2 && Math.abs(by) < 0.2) ||
+                  (Math.abs(ay - 100) < 0.2 && Math.abs(by - 100) < 0.2);
+                  
+                if (isBoundary) return null;
+                
+                return (
+                  <line
+                    key={`overlap-corridor-${school.id}-${i}`}
+                    x1={ax}
+                    y1={100 - ay}
+                    x2={bx}
+                    y2={100 - by}
+                    stroke={school.color}
+                    strokeWidth="12"
+                    strokeOpacity="0.08"
+                    strokeLinecap="round"
+                  />
+                );
+              });
             })}
 
             {/* 2. Visual Vectors (Lines from Students to Assigned Schools) */}
@@ -280,13 +306,13 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                 
                 {/* School Name Label Badge */}
                 <div
-                  className={`mt-1 px-1.5 py-0.5 rounded text-[8px] font-bold border transition-colors ${
-                    school.id === 'school-a'
-                      ? 'bg-blue-950/90 text-blue-300 border-blue-800/40'
-                      : 'bg-red-950/90 text-red-300 border-red-800/40'
-                  }`}
+                  className="mt-1 px-1.5 py-0.5 rounded text-[8px] font-bold border transition-colors bg-slate-950/90"
+                  style={{
+                    color: school.color,
+                    borderColor: `${school.color}40`,
+                  }}
                 >
-                  {school.id === 'school-a' ? 'School A' : 'School B'}
+                  {school.name.replace('School ', '')}
                 </div>
                 
                 {/* Pulse circle */}
@@ -367,17 +393,20 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
               </div>
 
               {/* Assignment details for students */}
-              {'assignedSchoolId' in hoveredPoint && hoveredPoint.assignedSchoolId && (
-                <div className="text-[10px] text-slate-400">
-                  Assigned to:{' '}
-                  <span
-                    className="font-bold capitalize"
-                    style={{ color: hoveredPoint.assignedSchoolId === 'school-a' ? '#60a5fa' : '#f87171' }}
-                  >
-                    {hoveredPoint.assignedSchoolId === 'school-a' ? 'School A' : 'School B'}
-                  </span>
-                </div>
-              )}
+              {'assignedSchoolId' in hoveredPoint && hoveredPoint.assignedSchoolId && (() => {
+                const s = schools.find((sch) => sch.id === hoveredPoint.assignedSchoolId);
+                return (
+                  <div className="text-[10px] text-slate-400">
+                    Assigned to:{' '}
+                    <span
+                      className="font-bold"
+                      style={{ color: s ? s.color : '#94a3b8' }}
+                    >
+                      {s ? s.name : hoveredPoint.assignedSchoolId}
+                    </span>
+                  </div>
+                );
+              })()}
 
               <div className="font-mono text-indigo-300 text-[10px] mt-0.5">
                 X: {hoveredPoint.x.toFixed(1)} | Y: {hoveredPoint.y.toFixed(1)}
@@ -411,7 +440,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                 <svg className="w-3.5 h-3.5" fill="none" stroke={school.color} viewBox="0 0 24 24" strokeWidth="2.5">
                   <path d="M12 2L2 7l10 5 10-5-10-5z" />
                 </svg>
-                <span>{school.id === 'school-a' ? 'School A' : school.id === 'school-b' ? 'School B' : 'School C'}</span>
+                <span>{school.name}</span>
               </button>
             ))}
           </div>
@@ -419,29 +448,22 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-slate-500 font-semibold uppercase tracking-wider text-[10px]">Zones:</span>
             <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-1.5">
-                <span className="w-4 h-2.5 rounded border border-dashed border-blue-500 bg-blue-500/10 inline-block" />
-                <span className="text-slate-400">Catchment A</span>
-              </div>
-              
-              {schools.some(s => s.id === 'school-b') && (
-                <div className="flex items-center gap-1.5">
-                  <span className="w-4 h-2.5 rounded border border-dashed border-red-500 bg-red-500/10 inline-block" />
-                  <span className="text-slate-400">Catchment B</span>
+              {schools.map((school) => (
+                <div key={`legend-zone-${school.id}`} className="flex items-center gap-1.5">
+                  <span
+                    className="w-4 h-2.5 rounded border border-dashed inline-block"
+                    style={{
+                      borderColor: school.color,
+                      backgroundColor: `${school.color}15`,
+                    }}
+                  />
+                  <span className="text-slate-400">Catchment {school.id.replace('school-', '').toUpperCase()}</span>
                 </div>
-              )}
-
-              {schools.some(s => s.id === 'school-c') && (
-                <div className="flex items-center gap-1.5">
-                  <span className="w-4 h-2.5 rounded border border-dashed border-yellow-500 bg-yellow-500/10 inline-block" />
-                  <span className="text-slate-400">Catchment C</span>
-                </div>
-              )}
-
+              ))}
               {schools.length > 1 && (
                 <div className="flex items-center gap-1.5">
-                  <span className="w-4 h-2.5 rounded border border-dashed border-purple-500 bg-purple-550/10 inline-block" />
-                  <span className="text-slate-300 font-medium">Overlap Corridor(s)</span>
+                  <span className="w-4 h-2.5 rounded border border-dashed border-purple-500 bg-purple-500/10 inline-block" />
+                  <span className="text-slate-350 font-medium">Overlap Corridor(s)</span>
                 </div>
               )}
             </div>

@@ -6,7 +6,7 @@ export interface Household {
   y: number; // Coordinate on 0-100 scale
   type: 'village' | 'isolated';
   settlementId?: string; // Links village household to a specific settlement center
-  assignedSchoolId?: 'school-a' | 'school-b' | 'school-c'; // Result of active policy assignment
+  assignedSchoolId?: 'school-a' | 'school-b' | 'school-c' | 'school-d' | 'school-e' | 'school-f'; // Result of active policy assignment
 }
 
 export interface SettlementCenter {
@@ -18,17 +18,18 @@ export interface SettlementCenter {
 }
 
 export interface School {
-  id: 'school-a' | 'school-b' | 'school-c';
+  id: 'school-a' | 'school-b' | 'school-c' | 'school-d' | 'school-e' | 'school-f';
   name: string;
   x: number; // Coordinate on 0-100 scale
   y: number; // Coordinate on 0-100 scale
   color: string; // Hex color code
   polygon: { x: number; y: number }[]; // Ordered vertices of the irregular catchment area
+  weight?: number; // Boundary weight for Voronoi cells
 }
 
 export interface ScenarioParams {
   settlementCount: number; // 1, 2, or 3
-  schoolCount: number;     // 1, 2, or 3
+  schoolCount: number;     // 1 to 6
   villageCount: number;    // default 40
   isolatedCount: number;   // default 10
   clusterRadius: number;   // default 8

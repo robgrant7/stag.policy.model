@@ -250,90 +250,50 @@ export function generateCatchmentPolygon(cx: number, cy: number, baseRadius = 35
  */
 export function generateSchools(count: number): School[] {
   const schools: School[] = [];
+  const SCHOOL_NAMES = ['School Alpha', 'School Beta', 'School Gamma', 'School Delta', 'School Epsilon', 'School Zeta'];
+  const SCHOOL_COLORS = ['#3b82f6', '#ef4444', '#84cc16', '#a855f7', '#f97316', '#06b6d4'];
+  const SCHOOL_IDS = ['school-a', 'school-b', 'school-c', 'school-d', 'school-e', 'school-f'] as const;
 
-  if (count === 1) {
-    // Centered School A (X: 40-60, Y: 40-60)
-    const x = 40 + Math.random() * 20;
-    const y = 40 + Math.random() * 20;
-    const roundedX = Math.round(x * 10) / 10;
-    const roundedY = Math.round(y * 10) / 10;
-    
-    schools.push({
-      id: 'school-a',
-      name: 'School Alpha',
-      x: roundedX,
-      y: roundedY,
-      color: '#3b82f6', // Blue
-      polygon: [],
-    });
-  } else if (count === 2) {
-    // School A (X: 15-35, Y: 20-80)
-    const ax = 15 + Math.random() * 20;
-    const ay = 20 + Math.random() * 60;
-    const roundedAx = Math.round(ax * 10) / 10;
-    const roundedAy = Math.round(ay * 10) / 10;
+  for (let i = 0; i < count; i++) {
+    let x = 50;
+    let y = 20 + Math.random() * 60;
 
-    schools.push({
-      id: 'school-a',
-      name: 'School Alpha',
-      x: roundedAx,
-      y: roundedAy,
-      color: '#3b82f6', // Blue
-      polygon: [],
-    });
-
-    // School B (X: 65-85, Y: 20-80)
-    const bx = 65 + Math.random() * 20;
-    const by = 20 + Math.random() * 60;
-    const roundedBx = Math.round(bx * 10) / 10;
-    const roundedBy = Math.round(by * 10) / 10;
-
-    schools.push({
-      id: 'school-b',
-      name: 'School Beta',
-      x: roundedBx,
-      y: roundedBy,
-      color: '#ef4444', // Red
-      polygon: [],
-    });
-  } else {
-    // 3 schools
-    // School A (X: 10-25, Y: 20-80)
-    const ax = 10 + Math.random() * 15;
-    const ay = 20 + Math.random() * 60;
-    
-    schools.push({
-      id: 'school-a',
-      name: 'School Alpha',
-      x: Math.round(ax * 10) / 10,
-      y: Math.round(ay * 10) / 10,
-      color: '#3b82f6', // Blue
-      polygon: [],
-    });
-
-    // School B (X: 45-55, Y: 20-80)
-    const bx = 45 + Math.random() * 10;
-    const by = 20 + Math.random() * 60;
+    if (count === 1) {
+      x = 40 + Math.random() * 20;
+      y = 40 + Math.random() * 20;
+    } else if (count === 2) {
+      x = i === 0 ? 15 + Math.random() * 20 : 65 + Math.random() * 20;
+    } else if (count === 3) {
+      if (i === 0) x = 10 + Math.random() * 15;
+      else if (i === 1) x = 45 + Math.random() * 10;
+      else x = 75 + Math.random() * 15;
+    } else if (count === 4) {
+      if (i === 0) x = 10 + Math.random() * 10;
+      else if (i === 1) x = 35 + Math.random() * 10;
+      else if (i === 2) x = 60 + Math.random() * 10;
+      else x = 80 + Math.random() * 10;
+    } else if (count === 5) {
+      if (i === 0) x = 5 + Math.random() * 10;
+      else if (i === 1) x = 25 + Math.random() * 10;
+      else if (i === 2) x = 45 + Math.random() * 10;
+      else if (i === 3) x = 65 + Math.random() * 10;
+      else x = 85 + Math.random() * 10;
+    } else {
+      // 6 schools
+      if (i === 0) x = 5 + Math.random() * 7;
+      else if (i === 1) x = 20 + Math.random() * 8;
+      else if (i === 2) x = 36 + Math.random() * 8;
+      else if (i === 3) x = 52 + Math.random() * 8;
+      else if (i === 4) x = 68 + Math.random() * 8;
+      else x = 84 + Math.random() * 8;
+    }
 
     schools.push({
-      id: 'school-b',
-      name: 'School Beta',
-      x: Math.round(bx * 10) / 10,
-      y: Math.round(by * 10) / 10,
-      color: '#ef4444', // Red
-      polygon: [],
-    });
-
-    // School C (X: 75-90, Y: 20-80)
-    const cx = 75 + Math.random() * 15;
-    const cy = 20 + Math.random() * 60;
-
-    schools.push({
-      id: 'school-c',
-      name: 'School Gamma',
-      x: Math.round(cx * 10) / 10,
-      y: Math.round(cy * 10) / 10,
-      color: '#eab308', // Yellow
+      id: SCHOOL_IDS[i],
+      name: SCHOOL_NAMES[i],
+      x: Math.round(x * 10) / 10,
+      y: Math.round(y * 10) / 10,
+      color: SCHOOL_COLORS[i],
       polygon: [],
     });
   }
@@ -354,6 +314,58 @@ export function getDeterministicScore(id: string): number {
 }
 
 /**
+ * Helper to calculate perpendicular distance from point P to line segment AB
+ */
+export function getDistanceToSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.sqrt((px - ax) ** 2 + (py - ay) ** 2);
+  
+  let t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t)); // Clamp to segment
+  
+  const projX = ax + t * dx;
+  const projY = ay + t * dy;
+  return Math.sqrt((px - projX) ** 2 + (py - projY) ** 2);
+}
+
+/**
+ * Checks if a point lies in the organic Voronoi overlap corridor (within 6 units of any inner edge)
+ */
+export function isPointInOverlap(
+  px: number,
+  py: number,
+  schools: School[],
+  buffer = 6
+): boolean {
+  for (const school of schools) {
+    const poly = school.polygon;
+    if (!poly || poly.length < 3) continue;
+    
+    for (let i = 0; i < poly.length; i++) {
+      const A = poly[i];
+      const B = poly[(i + 1) % poly.length];
+      
+      const ax = A.x, ay = A.y, bx = B.x, by = B.y;
+      const isBoundary = 
+        (Math.abs(ax) < 0.2 && Math.abs(bx) < 0.2) ||
+        (Math.abs(ax - 100) < 0.2 && Math.abs(bx - 100) < 0.2) ||
+        (Math.abs(ay) < 0.2 && Math.abs(by) < 0.2) ||
+        (Math.abs(ay - 100) < 0.2 && Math.abs(by - 100) < 0.2);
+        
+      if (!isBoundary) {
+        const dist = getDistanceToSegment(px, py, ax, ay, bx, by);
+        if (dist <= buffer) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * Asserts the transport policy assignment rules on a set of student nodes
  */
 export function assignHouseholds(
@@ -362,7 +374,8 @@ export function assignHouseholds(
   policy: TransportPolicy,
   overlapRule: 'community' | 'legacy_slider' = 'community',
   legacySplitInput: number | { a: number; b: number; c: number } = { a: 40, b: 30, c: 30 },
-  centers: SettlementCenter[] = []
+  centers: SettlementCenter[] = [],
+  attractiveness: Record<string, number> = {}
 ): Household[] {
   // Normalize legacySplit input
   let legacySplit = { a: 40, b: 30, c: 30 };
@@ -385,93 +398,90 @@ export function assignHouseholds(
     distances.sort((a, b) => a.distance - b.distance);
     const closestSchoolId = distances[0].id;
 
+    // Find closest school in Weighted Voronoi distance
+    const weightedDistances = schools.map((s) => ({
+      id: s.id,
+      dist: getDistance(h.x, h.y, s.x, s.y) - (s.weight ?? 1.0),
+    })).sort((a, b) => a.dist - b.dist);
+    const closestWeightedSchoolId = weightedDistances[0].id;
+
     // Strict Policy check
     if (policy === 'nearest' || schools.length === 1) {
       return {
         ...h,
-        assignedSchoolId: closestSchoolId as 'school-a' | 'school-b' | 'school-c',
+        assignedSchoolId: closestSchoolId as any,
       };
     }
 
     // policy === 'catchment'
-    // Find all schools whose polygon contains the student
-    const matchingSchools = schools.filter((s) => isPointInPolygon(h, s.polygon));
+    // Determine if student is in the organic overlap corridor
+    const inOverlap = isPointInOverlap(h.x, h.y, schools, 6);
 
     let assignedSchoolId: string;
 
-    if (matchingSchools.length === 1) {
-      // Exclusive Zone
-      assignedSchoolId = matchingSchools[0].id;
-    } else if (matchingSchools.length === 2) {
-      // Overlap Corridor (A & B, or B & C)
-      // Sort left-to-right to identify school1 and school2
-      const sortedMatches = [...matchingSchools].sort((a, b) => a.x - b.x);
-      const school1 = sortedMatches[0];
-      const school2 = sortedMatches[1];
-
+    if (inOverlap) {
       if (overlapRule === 'community') {
         // Feeder Settlement Unity
         if (h.type === 'village' && h.settlementId) {
           const center = centers.find((c) => c.id === h.settlementId);
           if (center) {
-            const distTo1 = getDistance(center.x, center.y, school1.x, school1.y);
-            const distTo2 = getDistance(center.x, center.y, school2.x, school2.y);
-            assignedSchoolId = distTo1 <= distTo2 ? school1.id : school2.id;
+            // Find school closest to settlement center (Euclidean)
+            const sortedCentDist = schools.map((s) => ({
+              id: s.id,
+              dist: getDistance(center.x, center.y, s.x, s.y),
+            })).sort((a, b) => a.dist - b.dist);
+            assignedSchoolId = sortedCentDist[0].id;
           } else {
-            // Outlier fallback inside the two matching schools
-            const distTo1 = getDistance(h.x, h.y, school1.x, school1.y);
-            const distTo2 = getDistance(h.x, h.y, school2.x, school2.y);
-            assignedSchoolId = distTo1 <= distTo2 ? school1.id : school2.id;
+            assignedSchoolId = closestWeightedSchoolId;
           }
         } else {
-          // Outlier fallback inside the two matching schools
-          const distTo1 = getDistance(h.x, h.y, school1.x, school1.y);
-          const distTo2 = getDistance(h.x, h.y, school2.x, school2.y);
-          assignedSchoolId = distTo1 <= distTo2 ? school1.id : school2.id;
+          assignedSchoolId = closestWeightedSchoolId;
         }
       } else {
-        // Historical Legacy Split (deterministic probability check)
-        const score = getDeterministicScore(h.id);
-        
+        // Historical Legacy Split (Attractiveness or Preference)
         if (schools.length === 2) {
+          // Fallback to single linear slider for 2 schools
+          const score = getDeterministicScore(h.id);
           assignedSchoolId = score < legacySplit.a ? 'school-a' : 'school-b';
         } else {
-          // 3 active schools: A, B, C
-          const hasA = matchingSchools.some(s => s.id === 'school-a');
-          const hasB = matchingSchools.some(s => s.id === 'school-b');
-          const hasC = matchingSchools.some(s => s.id === 'school-c');
+          // 3+ schools: Attractiveness utility-based split
+          const utilities = schools.map((s) => {
+            const dist = getDistance(h.x, h.y, s.x, s.y);
+            const distTerm = dist > 0.1 ? 1.0 / dist : 10.0;
+            const attr = attractiveness[s.id] ?? 0.0;
+            const utility = Math.max(0, distTerm * (1.0 + attr));
+            return { id: s.id, utility };
+          });
           
-          if (hasA && hasB) {
-            // A & B overlap corridor
-            const sumAB = legacySplit.a + legacySplit.b;
-            const relativeThreshold = sumAB > 0 ? (legacySplit.a / sumAB) * 100 : 50;
-            assignedSchoolId = score < relativeThreshold ? 'school-a' : 'school-b';
-          } else if (hasB && hasC) {
-            // B & C overlap corridor
-            const sumBC = legacySplit.b + legacySplit.c;
-            const relativeThreshold = sumBC > 0 ? (legacySplit.b / sumBC) * 100 : 50;
-            assignedSchoolId = score < relativeThreshold ? 'school-b' : 'school-c';
-          } else {
-            // Fallback: full split across active schools
-            const sumAll = legacySplit.a + legacySplit.b + legacySplit.c;
-            if (sumAll > 0) {
-              const th1 = (legacySplit.a / sumAll) * 100;
-              const th2 = ((legacySplit.a + legacySplit.b) / sumAll) * 100;
-              assignedSchoolId = score < th1 ? 'school-a' : score < th2 ? 'school-b' : 'school-c';
-            } else {
-              assignedSchoolId = closestSchoolId;
+          const sumUtility = utilities.reduce((sum, u) => sum + u.utility, 0);
+          
+          if (sumUtility > 0) {
+            const score = getDeterministicScore(h.id);
+            let accum = 0;
+            let assignedId = schools[0].id;
+            
+            for (let k = 0; k < utilities.length; k++) {
+              const prob = (utilities[k].utility / sumUtility) * 100;
+              accum += prob;
+              if (score < accum) {
+                assignedId = utilities[k].id;
+                break;
+              }
             }
+            assignedSchoolId = assignedId;
+          } else {
+            assignedSchoolId = closestWeightedSchoolId;
           }
         }
       }
     } else {
-      // Fallback for outside all polygons or in 3-way overlap (if any) -> closest school among all active schools
-      assignedSchoolId = closestSchoolId;
+      // Exclusive Zone
+      assignedSchoolId = closestWeightedSchoolId;
     }
 
     return {
       ...h,
-      assignedSchoolId: assignedSchoolId as 'school-a' | 'school-b' | 'school-c',
+      assignedSchoolId: assignedSchoolId as any,
     };
   });
 }
@@ -610,7 +620,23 @@ export function generateScenario(params: ScenarioParams): {
     });
   }
 
-  // 4. Calculate edge-to-edge catchment polygons
+  // 4. Calculate organic Weighted Voronoi catchment polygons
+  schools.forEach((school, index) => {
+    let villageSize = 10; // default baseline size
+    if (index < centers.length) {
+      if (settlementCount === 1) {
+        villageSize = villageCount; // 45
+      } else if (settlementCount === 2) {
+        villageSize = index === 0 ? 30 : 15;
+      } else {
+        // 3 settlements
+        villageSize = index === 0 ? 25 : index === 1 ? 13 : 7;
+      }
+    }
+    // Set school boundary weight to villageSize / 2
+    school.weight = Math.round((villageSize / 2) * 10) / 10;
+  });
+
   if (schoolCount === 1) {
     const schoolA = schools.find((s) => s.id === 'school-a');
     if (schoolA) {
@@ -621,65 +647,53 @@ export function generateScenario(params: ScenarioParams): {
         { x: 0, y: 100 },
       ];
     }
-  } else if (schoolCount === 2) {
-    const schoolA = schools.find((s) => s.id === 'school-a');
-    const schoolB = schools.find((s) => s.id === 'school-b');
-    
-    if (schoolA && schoolB) {
-      const xMid = (schoolA.x + schoolB.x) / 2;
-      const overlapWidth = 12;
-      
-      // School A Catchment Polygon: covers X=0 to X_mid + overlapWidth
-      schoolA.polygon = [
-        { x: 0, y: 0 },
-        { x: Math.round((xMid + overlapWidth) * 10) / 10, y: 0 },
-        { x: Math.round((xMid + overlapWidth) * 10) / 10, y: 100 },
-        { x: 0, y: 100 },
-      ];
-      
-      // School B Catchment Polygon: covers X_mid - overlapWidth to X=100
-      schoolB.polygon = [
-        { x: Math.round((xMid - overlapWidth) * 10) / 10, y: 0 },
-        { x: 100, y: 0 },
-        { x: 100, y: 100 },
-        { x: Math.round((xMid - overlapWidth) * 10) / 10, y: 100 },
-      ];
-    }
   } else {
-    // 3 schools: A, B, C
-    const schoolA = schools.find((s) => s.id === 'school-a');
-    const schoolB = schools.find((s) => s.id === 'school-b');
-    const schoolC = schools.find((s) => s.id === 'school-c');
-    
-    if (schoolA && schoolB && schoolC) {
-      const xMidAB = (schoolA.x + schoolB.x) / 2;
-      const xMidBC = (schoolB.x + schoolC.x) / 2;
-      const overlapWidth = 12;
-      
-      // Polygon A (Left): covers X=0 to X_midAB + overlapWidth
-      schoolA.polygon = [
-        { x: 0, y: 0 },
-        { x: Math.round((xMidAB + overlapWidth) * 10) / 10, y: 0 },
-        { x: Math.round((xMidAB + overlapWidth) * 10) / 10, y: 100 },
-        { x: 0, y: 100 },
-      ];
-      
-      // Polygon B (Center): covers X_midAB - overlapWidth to X_midBC + overlapWidth
-      schoolB.polygon = [
-        { x: Math.round((xMidAB - overlapWidth) * 10) / 10, y: 0 },
-        { x: Math.round((xMidBC + overlapWidth) * 10) / 10, y: 0 },
-        { x: Math.round((xMidBC + overlapWidth) * 10) / 10, y: 100 },
-        { x: Math.round((xMidAB - overlapWidth) * 10) / 10, y: 100 },
-      ];
-      
-      // Polygon C (Right): covers X_midBC - overlapWidth to X=100
-      schoolC.polygon = [
-        { x: Math.round((xMidBC - overlapWidth) * 10) / 10, y: 0 },
-        { x: 100, y: 0 },
-        { x: 100, y: 100 },
-        { x: Math.round((xMidBC - overlapWidth) * 10) / 10, y: 100 },
-      ];
-    }
+    // Generate Voronoi cells using polar ray casting
+    schools.forEach((school) => {
+      const K = 40;
+      const polygon: { x: number; y: number }[] = [];
+      for (let j = 0; j < K; j++) {
+        const theta = (j * 2 * Math.PI) / K;
+        let low = 0;
+        let high = 150;
+        
+        for (let iter = 0; iter < 12; iter++) {
+          const mid = (low + high) / 2;
+          const px = school.x + mid * Math.cos(theta);
+          const py = school.y + mid * Math.sin(theta);
+          
+          const inside = px >= 0 && px <= 100 && py >= 0 && py <= 100;
+          if (inside) {
+            let bestSchoolId = '';
+            let minDist = Infinity;
+            
+            schools.forEach((s) => {
+              const d = Math.sqrt((px - s.x) ** 2 + (py - s.y) ** 2) - (s.weight || 1.0);
+              if (d < minDist) {
+                minDist = d;
+                bestSchoolId = s.id;
+              }
+            });
+            
+            if (bestSchoolId === school.id) {
+              low = mid;
+            } else {
+              high = mid;
+            }
+          } else {
+            high = mid;
+          }
+        }
+        
+        const finalX = school.x + low * Math.cos(theta);
+        const finalY = school.y + low * Math.sin(theta);
+        polygon.push({
+          x: Math.round(finalX * 10) / 10,
+          y: Math.round(finalY * 10) / 10,
+        });
+      }
+      school.polygon = polygon;
+    });
   }
 
   return {

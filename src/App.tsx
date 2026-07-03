@@ -22,6 +22,14 @@ function App() {
   // Overlap Allocation States
   const [overlapRule, setOverlapRule] = useState<'community' | 'legacy_slider'>('community');
   const [legacySplit, setLegacySplit] = useState<{ a: number; b: number; c: number }>({ a: 40, b: 30, c: 30 });
+  const [attractiveness, setAttractiveness] = useState<Record<string, number>>({
+    'school-a': 0.0,
+    'school-b': 0.0,
+    'school-c': 0.0,
+    'school-d': 0.0,
+    'school-e': 0.0,
+    'school-f': 0.0,
+  });
 
   // 3. Scenario Data State
   const [households, setHouseholds] = useState<Household[]>([]);
@@ -38,7 +46,8 @@ function App() {
     currentParams = params,
     activePolicy = transportPolicy,
     activeOverlapRule = overlapRule,
-    activeLegacySplit = legacySplit
+    activeLegacySplit = legacySplit,
+    activeAttractiveness = attractiveness
   ) => {
     const { households: newHouseholds, centers: newCenters, schools: newSchools } = generateScenario(currentParams);
     
@@ -49,7 +58,8 @@ function App() {
       activePolicy,
       activeOverlapRule,
       activeLegacySplit,
-      newCenters
+      newCenters,
+      activeAttractiveness
     );
     
     setHouseholds(assigned);
@@ -78,17 +88,22 @@ function App() {
   // Recalculate assignments on existing points when controls change
   const handlePolicyChange = (policy: TransportPolicy) => {
     setTransportPolicy(policy);
-    setHouseholds((prev) => assignHouseholds(prev, schools, policy, overlapRule, legacySplit, centers));
+    setHouseholds((prev) => assignHouseholds(prev, schools, policy, overlapRule, legacySplit, centers, attractiveness));
   };
 
   const handleOverlapRuleChange = (rule: 'community' | 'legacy_slider') => {
     setOverlapRule(rule);
-    setHouseholds((prev) => assignHouseholds(prev, schools, transportPolicy, rule, legacySplit, centers));
+    setHouseholds((prev) => assignHouseholds(prev, schools, transportPolicy, rule, legacySplit, centers, attractiveness));
   };
 
   const handleLegacySplitChange = (split: { a: number; b: number; c: number }) => {
     setLegacySplit(split);
-    setHouseholds((prev) => assignHouseholds(prev, schools, transportPolicy, overlapRule, split, centers));
+    setHouseholds((prev) => assignHouseholds(prev, schools, transportPolicy, overlapRule, split, centers, attractiveness));
+  };
+
+  const handleAttractivenessChange = (attr: Record<string, number>) => {
+    setAttractiveness(attr);
+    setHouseholds((prev) => assignHouseholds(prev, schools, transportPolicy, overlapRule, legacySplit, centers, attr));
   };
 
   // 5. Export scenario data as JSON
@@ -165,7 +180,9 @@ function App() {
           onOverlapRuleChange={handleOverlapRuleChange}
           legacySplit={legacySplit}
           onLegacySplitChange={handleLegacySplitChange}
-          onGenerate={() => handleGenerate(params, transportPolicy, overlapRule, legacySplit)}
+          attractiveness={attractiveness}
+          onAttractivenessChange={handleAttractivenessChange}
+          onGenerate={() => handleGenerate(params, transportPolicy, overlapRule, legacySplit, attractiveness)}
           onExport={handleExport}
         />
 
