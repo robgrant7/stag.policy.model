@@ -844,6 +844,22 @@ export function generateScenario(params: ScenarioParams): {
     }
   });
 
+  // Helper to calculate minimum distance from a school center to a Voronoi cell polygon
+  function getDistanceToCell(school: { x: number; y: number }, cell: Point[]): number {
+    if (isPointInPolygon(school, cell)) return 0;
+    
+    let minDist = Infinity;
+    for (let i = 0; i < cell.length; i++) {
+      const p1 = cell[i];
+      const p2 = cell[(i + 1) % cell.length];
+      const dist = getDistanceToSegment(school.x, school.y, p1.x, p1.y, p2.x, p2.y);
+      if (dist < minDist) {
+        minDist = dist;
+      }
+    }
+    return minDist;
+  }
+
   // Assign each village to schools
   centers.forEach((center) => {
     let assignedSchools: string[] = [];
@@ -858,17 +874,26 @@ export function generateScenario(params: ScenarioParams): {
     });
     
     if (!isHome) {
-      // For non-home centers, assign to the closest school and any school within 22 units of the closest
-      const distances = schools.map((s) => ({
-        id: s.id,
-        distance: Math.sqrt((center.x - s.x) ** 2 + (center.y - s.y) ** 2),
-      }));
-      distances.sort((a, b) => a.distance - b.distance);
-      const minDist = distances[0].distance;
+      const cell = getVoronoiCellForCenter(center, centers);
       
-      distances.forEach((d) => {
-        if (d.distance <= minDist + 22.0) {
-          assignedSchools.push(d.id);
+      // Find the closest school to the center point
+      let closestSchoolId = schools[0].id;
+      let minSchoolDist = Infinity;
+      schools.forEach((s) => {
+        const dist = Math.sqrt((center.x - s.x) ** 2 + (center.y - s.y) ** 2);
+        if (dist < minSchoolDist) {
+          minSchoolDist = dist;
+          closestSchoolId = s.id;
+        }
+      });
+
+      schools.forEach((s) => {
+        const isClosest = s.id === closestSchoolId;
+        const distToCell = getDistanceToCell(s, cell);
+        const isWithin30 = distToCell <= 30.0;
+        
+        if (isClosest || isWithin30) {
+          assignedSchools.push(s.id);
         }
       });
     }
