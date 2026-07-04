@@ -126,14 +126,14 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       {/* Accordion Panels */}
       <div className="flex flex-col gap-4">
         {/* Accordion 1: Vehicle Fleet Tiers */}
-        <div className="border-b border-slate-800 pb-4">
+        <div className="border-b border-[#333333] pb-4">
           <button
             type="button"
             onClick={() => toggleAccordion('vehicles')}
-            className="w-full flex items-center justify-between py-2 text-xs font-bold text-slate-300 hover:text-slate-100 transition-colors uppercase tracking-wider cursor-pointer select-none"
+            className="w-full flex items-center justify-between py-2 text-slate-300 hover:text-white transition-colors cursor-pointer select-none"
           >
-            <span className="flex items-center gap-2">
-              <span className="text-indigo-400 text-sm">🚌</span> Accordion 1: Vehicle Fleet Tiers
+            <span className="flex items-center gap-2 font-heading tracking-wider text-base uppercase">
+              <span className="text-protest-yellow text-sm">🚌</span> Accordion 1: Vehicle Fleet Tiers
             </span>
             <svg
               className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeAccordion === 'vehicles' ? 'rotate-180' : ''}`}
@@ -245,15 +245,15 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             </div>
 
             {/* Coach parameters */}
-            <div className="space-y-3 p-3.5 bg-slate-955/40 border border-slate-855 rounded-xl">
-              <div className="flex items-center gap-2 text-slate-305 font-bold text-[10px] uppercase tracking-wider border-b border-slate-900 pb-1.5">
-                <span className="text-indigo-400 text-xs">🚌</span> COACH TIER
+            <div className="space-y-3 p-3.5 bg-slate-955/40 border border-[#333333] rounded-xl">
+              <div className="flex items-center gap-2 text-slate-305 font-heading text-xs uppercase tracking-wider border-b border-[#333333] pb-1.5">
+                <span className="text-protest-yellow text-xs">🚌</span> COACH TIER
               </div>
               {/* Capacity */}
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px]">
                   <span className="text-slate-455 font-medium">Coach Capacity</span>
-                  <span className="text-indigo-400 font-bold">{coachCapacity} pupils</span>
+                  <span className="text-protest-yellow font-bold">{coachCapacity} pupils</span>
                 </div>
                 <input
                   type="range"
@@ -262,14 +262,14 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                   step="5"
                   value={coachCapacity}
                   onChange={(e) => onChangeCoachCapacity(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-indigo-500 border border-slate-855"
+                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-protest-yellow border border-slate-855"
                 />
               </div>
               {/* Threshold */}
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px]">
                   <span className="text-slate-455 font-medium">Coach Min Threshold</span>
-                  <span className="text-indigo-400 font-bold">{coachThreshold} pupils</span>
+                  <span className="text-protest-yellow font-bold">{coachThreshold} pupils</span>
                 </div>
                 <input
                   type="range"
@@ -278,14 +278,14 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                   step="1"
                   value={coachThreshold}
                   onChange={(e) => onChangeCoachThreshold(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-indigo-500 border border-slate-855"
+                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-protest-yellow border border-slate-855"
                 />
               </div>
               {/* Cost */}
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px]">
                   <span className="text-slate-455 font-medium">Coach Daily Rate</span>
-                  <span className="text-indigo-400 font-bold">£{coachCost}/day</span>
+                  <span className="text-protest-yellow font-bold">£{coachCost}/day</span>
                 </div>
                 <input
                   type="range"
@@ -294,7 +294,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                   step="20"
                   value={coachCost}
                   onChange={(e) => onChangeCoachCost(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-indigo-500 border border-slate-855"
+                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-protest-yellow border border-slate-855"
                 />
               </div>
             </div>
@@ -302,14 +302,14 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         </div>
 
         {/* Accordion 2: Scenario Density Controls */}
-        <div className="border-b border-slate-800 pb-4">
+        <div className="border-b border-[#333333] pb-4">
           <button
             type="button"
             onClick={() => toggleAccordion('density')}
-            className="w-full flex items-center justify-between py-2 text-xs font-bold text-slate-300 hover:text-slate-100 transition-colors uppercase tracking-wider cursor-pointer select-none"
+            className="w-full flex items-center justify-between py-2 text-slate-300 hover:text-white transition-colors cursor-pointer select-none"
           >
-            <span className="flex items-center gap-2">
-              <span className="text-indigo-400 text-sm">📊</span> Accordion 2: Scenario Density Controls
+            <span className="flex items-center gap-2 font-heading tracking-wider text-base uppercase">
+              <span className="text-protest-yellow text-sm">📊</span> Accordion 2: Scenario Density Controls
             </span>
             <svg
               className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeAccordion === 'density' ? 'rotate-180' : ''}`}
@@ -360,7 +360,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               <select
                 value={params.settlementCount}
                 onChange={(e) => handleSettlementChange(parseInt(e.target.value))}
-                className="w-full bg-slate-950 text-slate-200 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+                className="w-full bg-slate-950 text-slate-200 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-protest-yellow transition-colors cursor-pointer"
               >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((count) => (
                   <option key={count} value={count}>
@@ -373,8 +373,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             {/* Village Households Slider */}
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-400 font-medium">Village Households</span>
-                <span className="text-indigo-400 font-bold">{params.villageCount}</span>
+                <span className="text-slate-405 font-medium">Village Households</span>
+                <span className="text-protest-yellow font-bold">{params.villageCount}</span>
               </div>
               <input
                 type="range"
@@ -383,15 +383,15 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 step="10"
                 value={params.villageCount}
                 onChange={(e) => handleSliderChange('villageCount', parseInt(e.target.value))}
-                className="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500 border border-slate-800"
+                className="w-full h-1.5 bg-slate-955 rounded-lg appearance-none cursor-pointer accent-protest-yellow border border-slate-800"
               />
             </div>
 
             {/* Isolated Outliers Slider */}
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-400 font-medium">Isolated Outliers (% of Total)</span>
-                <span className="text-rose-400 font-bold">{params.isolatedPercentage}% ({params.isolatedCount})</span>
+                <span className="text-slate-405 font-medium">Isolated Outliers (% of Total)</span>
+                <span className="text-rose-455 font-bold">{params.isolatedPercentage}% ({params.isolatedCount})</span>
               </div>
               <input
                 type="range"
@@ -400,15 +400,15 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 step="5"
                 value={params.isolatedPercentage}
                 onChange={(e) => handleSliderChange('isolatedPercentage', parseInt(e.target.value))}
-                className="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500 border border-slate-800"
+                className="w-full h-1.5 bg-slate-955 rounded-lg appearance-none cursor-pointer accent-protest-yellow border border-slate-800"
               />
             </div>
 
             {/* Cluster Radius Slider */}
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-400 font-medium">Village Cluster Radius</span>
-                <span className="text-indigo-400 font-bold">{params.clusterRadius} u</span>
+                <span className="text-slate-405 font-medium">Village Cluster Radius</span>
+                <span className="text-protest-yellow font-bold">{params.clusterRadius} u</span>
               </div>
               <input
                 type="range"
@@ -417,15 +417,15 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 step="1"
                 value={params.clusterRadius}
                 onChange={(e) => handleSliderChange('clusterRadius', parseInt(e.target.value))}
-                className="w-full h-1.5 bg-slate-955 rounded-lg appearance-none cursor-pointer accent-indigo-500 border border-slate-800"
+                className="w-full h-1.5 bg-slate-955 rounded-lg appearance-none cursor-pointer accent-protest-yellow border border-slate-800"
               />
             </div>
 
             {/* Overlap Assignment Controls */}
             {params.schoolCount > 1 && (
-              <div className="space-y-4 p-4 rounded-xl border border-indigo-950/40 bg-indigo-950/5 mt-4">
+              <div className="space-y-4 p-4 rounded-xl border border-protest-yellow/20 bg-protest-yellow/5 mt-4">
                 <div className="space-y-2">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-indigo-400">
+                  <label className="block text-xs font-heading tracking-wider text-protest-yellow uppercase">
                     Catchment Overlap Rule
                   </label>
                   <div className="grid grid-cols-2 gap-3">
@@ -434,8 +434,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                       onClick={() => onOverlapRuleChange('community')}
                       className={`p-3 rounded-xl border text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-1 text-center ${
                         overlapRule === 'community'
-                          ? 'bg-indigo-955/40 border-indigo-500 text-indigo-200 ring-2 ring-indigo-500/20'
-                          : 'bg-slate-950/60 border-slate-855 text-slate-450 hover:text-slate-200 hover:border-slate-800'
+                          ? 'bg-protest-yellow/10 border-protest-yellow text-protest-yellow ring-2 ring-protest-yellow/10'
+                          : 'bg-slate-950/60 border-slate-855 text-slate-400 hover:text-slate-200 hover:border-slate-800'
                       }`}
                     >
                       <span className="font-extrabold text-[11px]">Feeder Settlement Unity</span>
@@ -447,8 +447,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                       onClick={() => onOverlapRuleChange('legacy_slider')}
                       className={`p-3 rounded-xl border text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-1 text-center ${
                         overlapRule === 'legacy_slider'
-                          ? 'bg-indigo-955/40 border-indigo-500 text-indigo-200 ring-2 ring-indigo-500/20'
-                          : 'bg-slate-950/60 border-slate-855 text-slate-450 hover:text-slate-200 hover:border-slate-800'
+                          ? 'bg-protest-yellow/10 border-protest-yellow text-protest-yellow ring-2 ring-protest-yellow/10'
+                          : 'bg-slate-950/60 border-slate-855 text-slate-400 hover:text-slate-200 hover:border-slate-800'
                       }`}
                     >
                       <span className="font-extrabold text-[11px]">Historical Legacy Split</span>
@@ -461,7 +461,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                   <div className="space-y-2 pt-1 bg-slate-950/40 border border-slate-855 p-4 rounded-xl">
                     <div className="flex justify-between text-[10px]">
                       <span className="text-slate-400 font-bold uppercase tracking-wider">Legacy Preference (A vs B)</span>
-                      <span className="text-indigo-400 font-extrabold">{legacySplit.a}% / {100 - legacySplit.a}%</span>
+                      <span className="text-protest-yellow font-extrabold">{legacySplit.a}% / {100 - legacySplit.a}%</span>
                     </div>
                     <input
                       type="range"
@@ -473,7 +473,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                         const val = parseInt(e.target.value);
                         onLegacySplitChange({ a: val, b: 100 - val, c: 0 });
                       }}
-                      className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-indigo-500 border border-slate-800"
+                      className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-protest-yellow border border-slate-800"
                     />
                     <div className="flex justify-between text-[8px] text-slate-555">
                       <span>School A (Left)</span>
@@ -485,8 +485,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 {overlapRule === 'legacy_slider' && params.schoolCount >= 3 && (
                   <div className="space-y-4 pt-1 bg-slate-950/40 border border-slate-855 p-4 rounded-xl">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Attractiveness Sliders</span>
-                      <span className="text-[10px] text-indigo-400 font-bold bg-indigo-950/30 px-2 py-0.5 rounded-full border border-indigo-900/40">
+                      <span className="text-xs font-bold text-slate-350 uppercase tracking-wider">Attractiveness Sliders</span>
+                      <span className="text-[10px] text-protest-yellow font-bold bg-protest-yellow/10 px-2 py-0.5 rounded-full border border-protest-yellow/20">
                         Utility Multiplier
                       </span>
                     </div>
@@ -538,14 +538,14 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         </div>
 
         {/* Accordion 3: Settlement Registry & Archetypes */}
-        <div className="border-b border-slate-800 pb-4">
+        <div className="border-b border-[#333333] pb-4">
           <button
             type="button"
             onClick={() => toggleAccordion('registry')}
-            className="w-full flex items-center justify-between py-2 text-xs font-bold text-slate-300 hover:text-slate-100 transition-colors uppercase tracking-wider cursor-pointer select-none"
+            className="w-full flex items-center justify-between py-2 text-slate-300 hover:text-white transition-colors cursor-pointer select-none"
           >
-            <span className="flex items-center gap-2">
-              <span className="text-indigo-400 text-sm">🏘️</span> Accordion 3: Settlement Registry & Archetypes
+            <span className="flex items-center gap-2 font-heading tracking-wider text-base uppercase">
+              <span className="text-protest-yellow text-sm">🏘️</span> Accordion 3: Settlement Registry & Archetypes
             </span>
             <svg
               className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeAccordion === 'registry' ? 'rotate-180' : ''}`}
@@ -597,8 +597,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                         onClick={() => onUpdateVillage?.(center.id, { archetype: 'nucleated' })}
                         className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all border cursor-pointer ${
                           center.archetype === 'nucleated'
-                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-900/30'
-                            : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-250 hover:bg-slate-900'
+                            ? 'bg-protest-yellow text-black border-protest-yellow shadow-md shadow-protest-yellow/20 font-bold'
+                            : 'bg-[#121212] text-slate-405 border-[#333333] hover:text-slate-200 hover:bg-[#1a1a1a]'
                         }`}
                       >
                         Nucleated
@@ -608,8 +608,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                         onClick={() => onUpdateVillage?.(center.id, { archetype: 'linear' })}
                         className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all border cursor-pointer ${
                           center.archetype === 'linear'
-                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-900/30'
-                            : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-250 hover:bg-slate-900'
+                            ? 'bg-protest-yellow text-black border-protest-yellow shadow-md shadow-protest-yellow/20 font-bold'
+                            : 'bg-[#121212] text-slate-405 border-[#333333] hover:text-slate-200 hover:bg-[#1a1a1a]'
                         }`}
                       >
                         Linear
@@ -621,7 +621,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                   <div className="space-y-1">
                     <div className="flex justify-between text-[10px]">
                       <span className="text-slate-400 font-medium">Cluster Spread</span>
-                      <span className="text-indigo-400 font-bold">{center.dispersionRadius.toFixed(1)} u</span>
+                      <span className="text-protest-yellow font-bold">{center.dispersionRadius.toFixed(1)} u</span>
                     </div>
                     <input
                       type="range"
@@ -630,7 +630,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                       step="0.5"
                       value={center.dispersionRadius}
                       onChange={(e) => onUpdateVillage?.(center.id, { dispersionRadius: parseFloat(e.target.value) })}
-                      className="w-full h-1 bg-slate-955 rounded-lg appearance-none cursor-pointer accent-indigo-500 border border-slate-855"
+                      className="w-full h-1 bg-slate-955 rounded-lg appearance-none cursor-pointer accent-protest-yellow border border-slate-855"
                     />
                   </div>
                 </div>
@@ -640,14 +640,14 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         </div>
 
         {/* Accordion 4: Bulk Simulation Run */}
-        <div className="border-b border-slate-800 pb-4">
+        <div className="border-b border-[#333333] pb-4">
           <button
             type="button"
             onClick={() => toggleAccordion('bulk')}
-            className="w-full flex items-center justify-between py-2 text-xs font-bold text-slate-300 hover:text-slate-100 transition-colors uppercase tracking-wider cursor-pointer select-none"
+            className="w-full flex items-center justify-between py-2 text-slate-300 hover:text-white transition-colors cursor-pointer select-none"
           >
-            <span className="flex items-center gap-2">
-              <span className="text-indigo-400 text-sm">🧪</span> Accordion 4: Bulk Simulation Run
+            <span className="flex items-center gap-2 font-heading tracking-wider text-base uppercase">
+              <span className="text-protest-yellow text-sm">🧪</span> Accordion 4: Bulk Simulation Run
             </span>
             <svg
               className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeAccordion === 'bulk' ? 'rotate-180' : ''}`}
@@ -679,22 +679,21 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                   id="bulk-runs-count"
                   min="1"
                   max="2500"
-                  defaultValue="50"
-                  className="w-full bg-slate-950 text-slate-200 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                            className="w-full bg-slate-950 text-slate-200 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-protest-yellow transition-colors"
                   placeholder="e.g. 100"
                 />
               </div>
 
               {/* Progress indicator */}
               {isBulking && (
-                <div className="space-y-2 pt-2 border-t border-slate-900">
+                <div className="space-y-2 pt-2 border-t border-[#333333]">
                   <div className="flex justify-between text-[10px] text-slate-400 font-bold">
                     <span>Simulating runs...</span>
-                    <span className="text-indigo-400 font-black">{bulkProgress}%</span>
+                    <span className="text-protest-yellow font-black">{bulkProgress}%</span>
                   </div>
                   <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-900">
                     <div
-                      className="bg-gradient-to-r from-indigo-500 to-violet-500 h-full transition-all duration-150 ease-out"
+                      className="bg-protest-yellow h-full transition-all duration-150 ease-out"
                       style={{ width: `${bulkProgress}%` }}
                     />
                   </div>
@@ -714,13 +713,13 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 }}
                 className={`w-full py-2 px-4 rounded-xl text-xs font-bold transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer ${
                   isBulking
-                    ? 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed'
-                    : 'bg-indigo-600/90 hover:bg-indigo-600 border border-indigo-500/20 text-slate-100 active:scale-[0.98]'
+                    ? 'bg-slate-900 text-slate-650 border border-slate-800 cursor-not-allowed'
+                    : 'bg-protest-yellow hover:bg-[#ffe240] text-black active:scale-[0.98]'
                 }`}
               >
                 {isBulking ? (
                   <>
-                    <svg className="animate-spin h-3.5 w-3.5 text-slate-600" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin h-3.5 w-3.5 text-slate-650" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
@@ -739,10 +738,10 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 
             {/* Quick summary stats of previous run if any */}
             {bulkRuns.length > 0 && !isBulking && (
-              <div className="bg-slate-955 border border-slate-900 rounded-xl p-3.5 space-y-2.5 transition-all">
-                <div className="flex justify-between items-center text-[10px] font-bold text-slate-350 uppercase tracking-wider border-b border-slate-900 pb-1.5">
+              <div className="bg-[#222222] border border-[#333333] rounded-xl p-3.5 space-y-2.5 transition-all">
+                <div className="flex justify-between items-center text-[10px] font-bold text-slate-350 uppercase tracking-wider border-b border-[#333333] pb-1.5">
                   <span>Batch Run Results ({bulkRuns.length} Runs)</span>
-                  <span className="text-emerald-400 font-extrabold uppercase">Complete</span>
+                  <span className="text-emerald-450 font-extrabold uppercase">Complete</span>
                 </div>
                 
                 {(() => {
@@ -759,11 +758,11 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                       <div className="grid grid-cols-3 gap-1 text-center">
                         <div className="bg-slate-900/50 p-1.5 rounded-lg">
                           <span className="block text-[8px] text-slate-500 font-semibold uppercase">Catchment</span>
-                          <span className="text-xs font-bold text-indigo-400">{pctCatchment}%</span>
+                          <span className="text-xs font-bold text-protest-yellow">{pctCatchment}%</span>
                         </div>
                         <div className="bg-slate-900/50 p-1.5 rounded-lg">
                           <span className="block text-[8px] text-slate-500 font-semibold uppercase">Nearest</span>
-                          <span className="text-xs font-bold text-emerald-400">{pctNearest}%</span>
+                          <span className="text-xs font-bold text-protest-green">{pctNearest}%</span>
                         </div>
                         <div className="bg-slate-900/50 p-1.5 rounded-lg">
                           <span className="block text-[8px] text-slate-500 font-semibold uppercase">Neutral</span>
@@ -776,7 +775,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                         onClick={onOpenBulkReport}
                         className="w-full py-2 px-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-200 hover:text-white rounded-lg text-[10.5px] font-bold flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3.5 h-3.5 text-protest-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
                         </svg>
                         Open Interactive Report
@@ -791,10 +790,10 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       </div>
 
       {/* Main Action Buttons (Safe at bottom, always visible) */}
-      <div className="pt-2 space-y-3 border-t border-slate-800/80">
+      <div className="pt-4 space-y-3 border-t border-[#333333]">
         <button
           onClick={onGenerate}
-          className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-500 via-indigo-600 to-violet-600 hover:from-indigo-600 hover:to-violet-700 active:scale-[0.98] text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all duration-150 cursor-pointer border border-indigo-400/20"
+          className="w-full py-3 px-4 bg-protest-yellow hover:bg-[#ffe240] active:scale-[0.98] text-black font-heading text-lg font-bold tracking-wider uppercase rounded-xl shadow-lg shadow-protest-yellow/10 flex items-center justify-center gap-2 transition-all duration-150 cursor-pointer border border-protest-yellow"
         >
           <svg className="w-5 h-5 animate-spin-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 4H15" />
@@ -804,7 +803,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 
         <button
           onClick={onExport}
-          className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] text-slate-200 hover:text-white font-medium rounded-xl border border-slate-700/60 flex items-center justify-center gap-2 transition-all duration-150 cursor-pointer"
+          className="w-full py-2.5 px-4 bg-[#222222] hover:bg-[#2e2e2e] active:scale-[0.98] text-slate-200 hover:text-white font-heading text-sm font-semibold tracking-wider uppercase rounded-xl border border-[#333333] flex items-center justify-center gap-2 transition-all duration-150 cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />

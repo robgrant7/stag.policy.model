@@ -181,15 +181,15 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
   if (!stats) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-955/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       {/* Modal Container */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-[#121212] border border-[#333333] rounded-2xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-900/60 backdrop-blur-xl">
+        <div className="p-5 border-b border-[#333333] flex justify-between items-center bg-black backdrop-blur-xl">
           <div>
-            <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
-              <span className="text-indigo-400 text-lg">📊</span> Batch Simulation Report
+            <h2 className="font-heading tracking-wider text-xl text-slate-100 flex items-center gap-2 uppercase">
+              <span className="text-protest-yellow text-lg">📊</span> Batch Simulation Report
             </h2>
             <p className="text-xs text-slate-405 mt-0.5">
               Simulated {stats.totalRuns} runs with randomized parameters. Analyzing spatial distributions.
@@ -197,7 +197,7 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer font-bold text-xs"
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#333333] text-slate-400 hover:text-white hover:bg-[#222222] transition-all cursor-pointer font-bold text-xs"
           >
             ✕
           </button>
@@ -210,25 +210,25 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             
             {/* cost comparison card */}
-            <div className="bg-slate-950/50 border border-slate-850 rounded-xl p-4 flex flex-col justify-between">
+            <div className="bg-[#1a1a1a] border border-[#333333] rounded-xl p-4 flex flex-col justify-between">
               <div>
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Average Costs</span>
                 <div className="mt-2 space-y-1.5">
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-slate-405 font-medium">Catchment:</span>
-                    <span className="text-sm font-bold text-indigo-400">£{stats.avgCatchmentCost}/day</span>
+                    <span className="text-sm font-bold text-protest-blue">£{stats.avgCatchmentCost}/day</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-slate-405 font-medium">Nearest:</span>
-                    <span className="text-sm font-bold text-emerald-400">£{stats.avgNearestCost}/day</span>
+                    <span className="text-sm font-bold text-protest-green">£{stats.avgNearestCost}/day</span>
                   </div>
                 </div>
               </div>
-              <div className="pt-2.5 border-t border-slate-900 mt-3 text-[10.5px] text-slate-400">
+              <div className="pt-2.5 border-t border-[#333333] mt-3 text-[10.5px] text-slate-400">
                 {stats.avgCatchmentCost < stats.avgNearestCost ? (
-                  <span className="text-indigo-400 font-bold">Catchment is £{stats.avgNearestCost - stats.avgCatchmentCost}/day cheaper</span>
+                  <span className="text-protest-blue font-bold">Catchment is £{stats.avgNearestCost - stats.avgCatchmentCost}/day cheaper</span>
                 ) : stats.avgNearestCost < stats.avgCatchmentCost ? (
-                  <span className="text-emerald-400 font-bold">Nearest is £{stats.avgCatchmentCost - stats.avgNearestCost}/day cheaper</span>
+                  <span className="text-protest-green font-bold">Nearest is £{stats.avgCatchmentCost - stats.avgNearestCost}/day cheaper</span>
                 ) : (
                   <span>Policy costs are neutral on average</span>
                 )}
@@ -236,24 +236,24 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
             </div>
 
             {/* winner distribution card */}
-            <div className="bg-slate-950/50 border border-slate-850 rounded-xl p-4 flex flex-col justify-between md:col-span-2">
+            <div className="bg-[#1a1a1a] border border-[#333333] rounded-xl p-4 flex flex-col justify-between md:col-span-2">
               <div>
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Overall Policy Win Ratio</span>
                 <div className="mt-3">
                   {/* Distribution Bar */}
-                  <div className="w-full h-3.5 bg-slate-900 rounded-full flex overflow-hidden border border-slate-850">
+                  <div className="w-full h-3.5 bg-black rounded-full flex overflow-hidden border border-[#333333]">
                     <div
-                      className="bg-indigo-600 h-full hover:opacity-90 transition-all"
+                      className="bg-protest-blue h-full hover:opacity-90 transition-all"
                       style={{ width: `${stats.pctCatchmentCheaper}%` }}
                       title={`Catchment Cheaper: ${stats.pctCatchmentCheaper}%`}
                     />
                     <div
-                      className="bg-slate-650 h-full hover:opacity-90 transition-all"
+                      className="bg-[#333333] h-full hover:opacity-90 transition-all"
                       style={{ width: `${stats.pctTies}%` }}
                       title={`Ties: ${stats.pctTies}%`}
                     />
                     <div
-                      className="bg-emerald-600 h-full hover:opacity-90 transition-all"
+                      className="bg-protest-green h-full hover:opacity-90 transition-all"
                       style={{ width: `${stats.pctNearestCheaper}%` }}
                       title={`Nearest Cheaper: ${stats.pctNearestCheaper}%`}
                     />
@@ -262,37 +262,37 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
               </div>
               
               <div className="grid grid-cols-3 gap-2 mt-3 text-center text-[10px]">
-                <div className="bg-slate-900/40 p-1.5 rounded-lg border border-slate-900">
+                <div className="bg-black/40 p-1.5 rounded-lg border border-[#333333]">
                   <span className="block font-medium text-slate-500">Catchment wins</span>
-                  <span className="text-xs font-bold text-indigo-400">{stats.pctCatchmentCheaper}% ({stats.catchmentCheaperCount})</span>
+                  <span className="text-xs font-bold text-protest-blue">{stats.pctCatchmentCheaper}% ({stats.catchmentCheaperCount})</span>
                 </div>
-                <div className="bg-slate-900/40 p-1.5 rounded-lg border border-slate-900">
+                <div className="bg-black/40 p-1.5 rounded-lg border border-[#333333]">
                   <span className="block font-medium text-slate-500">Neutral (Ties)</span>
                   <span className="text-xs font-bold text-slate-400">{stats.pctTies}% ({stats.tieCount})</span>
                 </div>
-                <div className="bg-slate-900/40 p-1.5 rounded-lg border border-slate-900">
+                <div className="bg-black/40 p-1.5 rounded-lg border border-[#333333]">
                   <span className="block font-medium text-slate-500">Nearest wins</span>
-                  <span className="text-xs font-bold text-emerald-400">{stats.pctNearestCheaper}% ({stats.nearestCheaperCount})</span>
+                  <span className="text-xs font-bold text-protest-green">{stats.pctNearestCheaper}% ({stats.nearestCheaperCount})</span>
                 </div>
               </div>
             </div>
 
             {/* peak savings card */}
-            <div className="bg-slate-950/50 border border-slate-850 rounded-xl p-4 flex flex-col justify-between">
+            <div className="bg-[#1a1a1a] border border-[#333333] rounded-xl p-4 flex flex-col justify-between">
               <div>
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Peak Savings Detected</span>
                 <div className="mt-2 space-y-1.5">
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-slate-405 font-medium">Catchment Peak:</span>
-                    <span className="text-xs font-bold text-indigo-400">£{stats.maxCatchmentSavings}/day</span>
+                    <span className="text-xs font-bold text-protest-blue">£{stats.maxCatchmentSavings}/day</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-slate-405 font-medium">Nearest Peak:</span>
-                    <span className="text-xs font-bold text-emerald-400">£{stats.maxNearestSavings}/day</span>
+                    <span className="text-xs font-bold text-protest-green">£{stats.maxNearestSavings}/day</span>
                   </div>
                 </div>
               </div>
-              <div className="pt-2 border-t border-slate-900 mt-2 text-[10px] text-slate-500 italic">
+              <div className="pt-2 border-t border-[#333333] mt-2 text-[10px] text-slate-500 italic">
                 Reflects optimal localized configurations.
               </div>
             </div>
@@ -300,39 +300,39 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
           </div>
 
           {/* 2. Deficit Distribution Histogram Chart */}
-          <div className="bg-slate-950/40 border border-slate-850 rounded-xl p-5 space-y-5">
+          <div className="bg-[#1a1a1a] border border-[#333333] rounded-xl p-5 space-y-5">
             <div>
-              <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Cost Savings Margin Distribution</h3>
+              <h3 className="text-xs font-heading tracking-wider uppercase text-slate-300">Cost Savings Margin Distribution</h3>
               <p className="text-[11px] text-slate-505 mt-0.5">
                 Deficit delta breakdown (Catchment Cost − Nearest Cost). Left shows Catchment savings, right shows Nearest savings.
               </p>
             </div>
             
-            <div className="flex flex-col md:flex-row items-end justify-between gap-6 h-60 pt-6 border-b border-slate-800 pb-2 px-4">
+            <div className="flex flex-col md:flex-row items-end justify-between gap-6 h-60 pt-6 border-b border-[#333333] pb-2 px-4">
               {/* Bucket 1: Significant Catchment Savings */}
               <div className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
-                <span className="text-[10px] font-mono font-bold text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-[10px] font-mono font-bold text-protest-blue opacity-0 group-hover:opacity-100 transition-opacity">
                   {stats.histogram.deltaSigCatchment} runs
                 </span>
                 <div
-                  className="w-full bg-indigo-600 rounded-t-lg transition-all duration-300 group-hover:bg-indigo-500"
+                  className="w-full bg-protest-blue rounded-t-lg transition-all duration-300 group-hover:opacity-90"
                   style={{ height: `${(stats.histogram.deltaSigCatchment / stats.histogram.maxBucketCount) * 80}%` }}
                 />
-                <span className="text-[9px] font-bold text-indigo-400/90 text-center uppercase tracking-wider block">
+                <span className="text-[9px] font-bold text-protest-blue/90 text-center uppercase tracking-wider block">
                   Catchment &gt; £200
                 </span>
               </div>
 
               {/* Bucket 2: Moderate Catchment Savings */}
               <div className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
-                <span className="text-[10px] font-mono font-bold text-indigo-405 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-[10px] font-mono font-bold text-protest-blue opacity-0 group-hover:opacity-100 transition-opacity">
                   {stats.histogram.deltaModCatchment} runs
                 </span>
                 <div
-                  className="w-full bg-indigo-500/70 rounded-t-lg transition-all duration-300 group-hover:bg-indigo-450"
+                  className="w-full bg-protest-blue/70 rounded-t-lg transition-all duration-300 group-hover:opacity-80"
                   style={{ height: `${(stats.histogram.deltaModCatchment / stats.histogram.maxBucketCount) * 80}%` }}
                 />
-                <span className="text-[9px] font-bold text-indigo-305 text-center uppercase tracking-wider block">
+                <span className="text-[9px] font-bold text-protest-blue/80 text-center uppercase tracking-wider block">
                   Catchment £50–£200
                 </span>
               </div>
@@ -405,15 +405,15 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
                         <span>{label}</span>
                         <span className="text-[10px] font-mono font-bold text-slate-450">({total} runs)</span>
                       </div>
-                      <div className="w-full h-3 bg-slate-950 rounded-full flex overflow-hidden border border-slate-900">
-                        <div className="bg-indigo-600 h-full" style={{ width: `${cPct}%` }} title={`Catchment: ${cPct}%`} />
-                        <div className="bg-slate-700 h-full" style={{ width: `${tPct}%` }} title={`Tie: ${tPct}%`} />
-                        <div className="bg-emerald-600 h-full" style={{ width: `${nPct}%` }} title={`Nearest: ${nPct}%`} />
+                      <div className="w-full h-3 bg-[#121212] rounded-full flex overflow-hidden border border-[#333333]">
+                        <div className="bg-protest-blue h-full" style={{ width: `${cPct}%` }} title={`Catchment: ${cPct}%`} />
+                        <div className="bg-[#333333] h-full" style={{ width: `${tPct}%` }} title={`Tie: ${tPct}%`} />
+                        <div className="bg-protest-green h-full" style={{ width: `${nPct}%` }} title={`Nearest: ${nPct}%`} />
                       </div>
                       <div className="flex justify-between text-[9px] text-slate-500 font-bold px-1">
-                        <span className="text-indigo-400">Catchment: {cPct}%</span>
+                        <span className="text-protest-blue">Catchment: {cPct}%</span>
                         <span className="text-slate-450">Ties: {tPct}%</span>
-                        <span className="text-emerald-400">Nearest: {nPct}%</span>
+                        <span className="text-protest-green">Nearest: {nPct}%</span>
                       </div>
                     </div>
                   );
@@ -442,15 +442,15 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
                         <span>{label}</span>
                         <span className="text-[10px] font-mono font-bold text-slate-450">({total} runs)</span>
                       </div>
-                      <div className="w-full h-3 bg-slate-950 rounded-full flex overflow-hidden border border-slate-900">
-                        <div className="bg-indigo-600 h-full" style={{ width: `${cPct}%` }} title={`Catchment: ${cPct}%`} />
-                        <div className="bg-slate-700 h-full" style={{ width: `${tPct}%` }} title={`Tie: ${tPct}%`} />
-                        <div className="bg-emerald-600 h-full" style={{ width: `${nPct}%` }} title={`Nearest: ${nPct}%`} />
+                      <div className="w-full h-3 bg-[#121212] rounded-full flex overflow-hidden border border-[#333333]">
+                        <div className="bg-protest-blue h-full" style={{ width: `${cPct}%` }} title={`Catchment: ${cPct}%`} />
+                        <div className="bg-[#333333] h-full" style={{ width: `${tPct}%` }} title={`Tie: ${tPct}%`} />
+                        <div className="bg-protest-green h-full" style={{ width: `${nPct}%` }} title={`Nearest: ${nPct}%`} />
                       </div>
                       <div className="flex justify-between text-[9px] text-slate-500 font-bold px-1">
-                        <span className="text-indigo-400">Catchment: {cPct}%</span>
-                        <span className="text-slate-450">Ties: {tPct}%</span>
-                        <span className="text-emerald-400">Nearest: {nPct}%</span>
+                        <span className="text-protest-blue">Catchment: {cPct}%</span>
+                        <span className="text-slate-455">Ties: {tPct}%</span>
+                        <span className="text-protest-green">Nearest: {nPct}%</span>
                       </div>
                     </div>
                   );
@@ -479,15 +479,15 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
                         <span>{label}</span>
                         <span className="text-[10px] font-mono font-bold text-slate-450">({total} runs)</span>
                       </div>
-                      <div className="w-full h-3 bg-slate-950 rounded-full flex overflow-hidden border border-slate-900">
-                        <div className="bg-indigo-600 h-full" style={{ width: `${cPct}%` }} title={`Catchment: ${cPct}%`} />
-                        <div className="bg-slate-700 h-full" style={{ width: `${tPct}%` }} title={`Tie: ${tPct}%`} />
-                        <div className="bg-emerald-600 h-full" style={{ width: `${nPct}%` }} title={`Nearest: ${nPct}%`} />
+                      <div className="w-full h-3 bg-[#121212] rounded-full flex overflow-hidden border border-[#333333]">
+                        <div className="bg-protest-blue h-full" style={{ width: `${cPct}%` }} title={`Catchment: ${cPct}%`} />
+                        <div className="bg-[#333333] h-full" style={{ width: `${tPct}%` }} title={`Tie: ${tPct}%`} />
+                        <div className="bg-protest-green h-full" style={{ width: `${nPct}%` }} title={`Nearest: ${nPct}%`} />
                       </div>
                       <div className="flex justify-between text-[9px] text-slate-500 font-bold px-1">
-                        <span className="text-indigo-400">Catchment: {cPct}%</span>
-                        <span className="text-slate-450">Ties: {tPct}%</span>
-                        <span className="text-emerald-400">Nearest: {nPct}%</span>
+                        <span className="text-protest-blue">Catchment: {cPct}%</span>
+                        <span className="text-slate-455">Ties: {tPct}%</span>
+                        <span className="text-protest-green">Nearest: {nPct}%</span>
                       </div>
                     </div>
                   );
@@ -510,11 +510,11 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
                     <span className="text-slate-300 font-bold">Catchment: {stats.avgCatchmentCoaches} vs Nearest: {stats.avgNearestCoaches}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-indigo-500 h-full" style={{ width: `${Math.min(100, (stats.avgCatchmentCoaches / 10) * 100)}%` }} />
+                    <div className="w-full bg-black rounded-full h-1.5 overflow-hidden border border-[#333333]">
+                      <div className="bg-protest-blue h-full" style={{ width: `${Math.min(100, (stats.avgCatchmentCoaches / 10) * 100)}%` }} />
                     </div>
-                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-emerald-500 h-full" style={{ width: `${Math.min(100, (stats.avgNearestCoaches / 10) * 100)}%` }} />
+                    <div className="w-full bg-black rounded-full h-1.5 overflow-hidden border border-[#333333]">
+                      <div className="bg-protest-green h-full" style={{ width: `${Math.min(100, (stats.avgNearestCoaches / 10) * 100)}%` }} />
                     </div>
                   </div>
                 </div>
@@ -526,11 +526,11 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
                     <span className="text-slate-300 font-bold">Catchment: {stats.avgCatchmentMinibuses} vs Nearest: {stats.avgNearestMinibuses}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-indigo-500 h-full" style={{ width: `${Math.min(100, (stats.avgCatchmentMinibuses / 15) * 100)}%` }} />
+                    <div className="w-full bg-black rounded-full h-1.5 overflow-hidden border border-[#333333]">
+                      <div className="bg-protest-blue h-full" style={{ width: `${Math.min(100, (stats.avgCatchmentMinibuses / 15) * 100)}%` }} />
                     </div>
-                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-emerald-500 h-full" style={{ width: `${Math.min(100, (stats.avgNearestMinibuses / 15) * 100)}%` }} />
+                    <div className="w-full bg-black rounded-full h-1.5 overflow-hidden border border-[#333333]">
+                      <div className="bg-protest-green h-full" style={{ width: `${Math.min(100, (stats.avgNearestMinibuses / 15) * 100)}%` }} />
                     </div>
                   </div>
                 </div>
@@ -542,11 +542,11 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
                     <span className="text-slate-300 font-bold">Catchment: {stats.avgCatchmentTaxis} vs Nearest: {stats.avgNearestTaxis}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-indigo-500 h-full" style={{ width: `${Math.min(100, (stats.avgCatchmentTaxis / 20) * 100)}%` }} />
+                    <div className="w-full bg-black rounded-full h-1.5 overflow-hidden border border-[#333333]">
+                      <div className="bg-protest-blue h-full" style={{ width: `${Math.min(100, (stats.avgCatchmentTaxis / 20) * 100)}%` }} />
                     </div>
-                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-emerald-500 h-full" style={{ width: `${Math.min(100, (stats.avgNearestTaxis / 20) * 100)}%` }} />
+                    <div className="w-full bg-black rounded-full h-1.5 overflow-hidden border border-[#333333]">
+                      <div className="bg-protest-green h-full" style={{ width: `${Math.min(100, (stats.avgNearestTaxis / 20) * 100)}%` }} />
                     </div>
                   </div>
                 </div>
@@ -558,22 +558,22 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
         </div>
         
         {/* Footer with Scenario Injector Actions */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/40 flex flex-col sm:flex-row justify-between items-center gap-3">
-          <span className="text-[10px] text-slate-500">
+        <div className="p-4 border-t border-[#333333] bg-black/40 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-heading">
             Want to visualize the layouts? Load a random scenario winner directly:
           </span>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 font-heading">
             <button
               onClick={() => handleLoadRandomWinner('catchment')}
               disabled={stats.catchmentCheaperCount === 0}
-              className="px-3.5 py-1.5 bg-indigo-950/40 hover:bg-indigo-650/40 disabled:bg-slate-900 border border-indigo-900/40 disabled:border-slate-800 rounded-lg text-xs font-bold text-indigo-400 disabled:text-slate-600 transition-all cursor-pointer"
+              className="px-3.5 py-1.5 bg-protest-blue/10 hover:bg-protest-blue/20 disabled:bg-slate-900 border border-protest-blue/30 disabled:border-[#333333] rounded-lg text-xs font-bold text-protest-blue disabled:text-slate-650 transition-all cursor-pointer tracking-wider uppercase"
             >
               🎲 Load Random Catchment Winner
             </button>
             <button
               onClick={() => handleLoadRandomWinner('nearest')}
               disabled={stats.nearestCheaperCount === 0}
-              className="px-3.5 py-1.5 bg-emerald-950/40 hover:bg-emerald-650/40 disabled:bg-slate-900 border border-emerald-900/40 disabled:border-slate-800 rounded-lg text-xs font-bold text-emerald-400 disabled:text-slate-600 transition-all cursor-pointer"
+              className="px-3.5 py-1.5 bg-protest-green/10 hover:bg-protest-green/20 disabled:bg-slate-900 border border-protest-green/30 disabled:border-[#333333] rounded-lg text-xs font-bold text-protest-green disabled:text-slate-655 transition-all cursor-pointer tracking-wider uppercase"
             >
               🎲 Load Random Nearest Winner
             </button>

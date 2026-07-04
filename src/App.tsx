@@ -362,104 +362,105 @@ function App() {
   };
 
   return (
-    <div className="h-screen max-h-screen w-full flex overflow-hidden bg-slate-950 text-slate-100 font-sans">
-      {/* Left Panel (Controls Sidebar) */}
-      <aside className="w-1/3 h-full overflow-y-auto p-6 border-r border-slate-800 flex flex-col gap-6 bg-slate-950">
-        {/* Header content inline */}
-        <div className="flex items-center gap-3 pb-4 border-b border-slate-900">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+    <div className="h-screen max-h-screen w-full flex flex-col overflow-hidden bg-[#121212] text-white">
+      {/* Top Header matching the financial app */}
+      <header className="bg-black border-b-2 border-protest-yellow px-[4%] py-4 flex justify-between items-center z-10 shadow-md">
+        <div className="flex flex-col">
+          <h1 className="font-heading text-2xl md:text-3xl leading-none tracking-wider text-protest-yellow uppercase">
+            Independent Spatial Policy Model
+            <span className="text-[10px] font-sans font-medium bg-white/10 px-1.5 py-0.5 rounded ml-2.5 text-slate-300 align-middle">
+              v2.2
+            </span>
+          </h1>
+          <div className="text-[10px] tracking-[2px] uppercase text-slate-400 font-bold mt-1">
+            Home to School Transport Policy Audit & Spatial Simulator
           </div>
-          <div>
-            <h1 className="text-base font-bold bg-gradient-to-r from-slate-50 via-slate-200 to-slate-400 bg-clip-text text-transparent tracking-tight">
-              STAG Spatial Dispersion Model
-            </h1>
-            <p className="text-[10px] text-slate-400 font-medium">
-              School Transport Policy Modeling & Rural Simulator
+        </div>
+      </header>
+
+      {/* Main Container below Header */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Panel (Controls Sidebar) */}
+        <aside className="w-1/3 h-full overflow-y-auto p-6 border-r border-[#333333] flex flex-col gap-6 bg-[#1a1a1a]">
+          
+          {/* Mini stats dashboard inside left panel */}
+          <StatsOverlay households={displayedHouseholds} centers={centers} schools={schools} />
+
+          <ControlPanel
+            params={params}
+            onChangeParams={handleChangeParams}
+            overlapRule={overlapRule}
+            onOverlapRuleChange={handleOverlapRuleChange}
+            legacySplit={legacySplit}
+            onLegacySplitChange={handleLegacySplitChange}
+            attractiveness={attractiveness}
+            onAttractivenessChange={handleAttractivenessChange}
+            onGenerate={() => handleGenerate(params, overlapRule, legacySplit, attractiveness)}
+            onExport={handleExport}
+            centers={centers}
+            onUpdateVillage={handleUpdateVillage}
+            onResetVillages={handleResetVillages}
+            coachCapacity={coachCapacity}
+            onChangeCoachCapacity={setCoachCapacity}
+            coachThreshold={coachThreshold}
+            onChangeCoachThreshold={setCoachThreshold}
+            coachCost={coachCost}
+            onChangeCoachCost={setCoachCost}
+            minibusCapacity={minibusCapacity}
+            onChangeMinibusCapacity={setMinibusCapacity}
+            minibusThreshold={minibusThreshold}
+            onChangeMinibusThreshold={setMinibusThreshold}
+            minibusCost={minibusCost}
+            onChangeMinibusCost={setMinibusCost}
+            taxiCapacity={taxiCapacity}
+            onChangeTaxiCapacity={setTaxiCapacity}
+            taxiCost={taxiCost}
+            onChangeTaxiCost={setTaxiCost}
+            // Bulk Run Props
+            bulkRuns={bulkRuns}
+            isBulking={isBulking}
+            bulkProgress={bulkProgress}
+            onRunBulk={handleRunBulk}
+            onOpenBulkReport={() => setIsBulkReportModalOpen(true)}
+          />
+
+          <FinancialPanel
+            financials={financials}
+          />
+
+          {/* Context/Information block */}
+          <div className="bg-[#222222] border border-[#333333] rounded-xl p-5 text-xs text-slate-400 space-y-3">
+            <h3 className="font-heading text-protest-yellow text-sm tracking-wider uppercase">Policy Comparison Framework</h3>
+            <p className="text-[11px] leading-normal text-slate-355">
+              This simulator runs parallel cost calculations:
             </p>
+            <ul className="list-disc list-inside space-y-1.5 text-slate-400 text-[11px]">
+              <li>
+                <strong className="text-protest-blue font-semibold">Catchment Policy</strong>: Restricts routing to administrative school boundaries, funneling overlap zones.
+              </li>
+              <li>
+                <strong className="text-protest-green font-semibold">Nearest Policy</strong>: Disregards boundaries, routing students strictly to their closest destination school.
+              </li>
+            </ul>
           </div>
-        </div>
 
-        {/* Mini stats dashboard inside left panel for better readability and structure */}
-        <StatsOverlay households={displayedHouseholds} centers={centers} schools={schools} />
+          <footer className="pt-4 border-t border-[#333333] text-center text-[10px] text-slate-500">
+            STAG Policy Model • Rural Transport Spatial Simulator
+          </footer>
+        </aside>
 
-        <ControlPanel
-          params={params}
-          onChangeParams={handleChangeParams}
-          overlapRule={overlapRule}
-          onOverlapRuleChange={handleOverlapRuleChange}
-          legacySplit={legacySplit}
-          onLegacySplitChange={handleLegacySplitChange}
-          attractiveness={attractiveness}
-          onAttractivenessChange={handleAttractivenessChange}
-          onGenerate={() => handleGenerate(params, overlapRule, legacySplit, attractiveness)}
-          onExport={handleExport}
-          centers={centers}
-          onUpdateVillage={handleUpdateVillage}
-          onResetVillages={handleResetVillages}
-          coachCapacity={coachCapacity}
-          onChangeCoachCapacity={setCoachCapacity}
-          coachThreshold={coachThreshold}
-          onChangeCoachThreshold={setCoachThreshold}
-          coachCost={coachCost}
-          onChangeCoachCost={setCoachCost}
-          minibusCapacity={minibusCapacity}
-          onChangeMinibusCapacity={setMinibusCapacity}
-          minibusThreshold={minibusThreshold}
-          onChangeMinibusThreshold={setMinibusThreshold}
-          minibusCost={minibusCost}
-          onChangeMinibusCost={setMinibusCost}
-          taxiCapacity={taxiCapacity}
-          onChangeTaxiCapacity={setTaxiCapacity}
-          taxiCost={taxiCost}
-          onChangeTaxiCost={setTaxiCost}
-          // Bulk Run Props
-          bulkRuns={bulkRuns}
-          isBulking={isBulking}
-          bulkProgress={bulkProgress}
-          onRunBulk={handleRunBulk}
-          onOpenBulkReport={() => setIsBulkReportModalOpen(true)}
-        />
-
-        <FinancialPanel
-          financials={financials}
-        />
-
-        {/* Context/Information block */}
-        <div className="bg-slate-900/40 border border-slate-800/85 rounded-2xl p-5 text-xs text-slate-400 space-y-3">
-          <h3 className="font-bold text-slate-350 uppercase tracking-wider text-[10px]">Policy Comparison Framework</h3>
-          <p className="text-[11px] leading-normal text-slate-400">
-            This simulator runs parallel cost calculations:
-          </p>
-          <ul className="list-disc list-inside space-y-1.5 text-slate-450 text-[11px]">
-            <li>
-              <strong className="text-indigo-400 font-semibold">Catchment Policy</strong>: Restricts routing to administrative school boundaries, funneling overlap zones.
-            </li>
-            <li>
-              <strong className="text-emerald-400 font-semibold">Nearest Policy</strong>: Disregards boundaries, routing students strictly to their closest destination school.
-            </li>
-          </ul>
-        </div>
-
-        <footer className="pt-4 border-t border-slate-900 text-center text-[10px] text-slate-500">
-          STAG Policy Model • Rural Transport Spatial Simulator
-        </footer>
-      </aside>
-
-      {/* Right Panel (Map Canvas Only) */}
-      <main className="w-2/3 h-full p-6 bg-slate-900 overflow-hidden">
-        <GridCanvas
-          households={displayedHouseholds}
-          centers={centers}
-          schools={schools}
-          clusterRadius={params.clusterRadius}
-          mapViewPolicy={mapViewPolicy}
-          onMapViewPolicyChange={setMapViewPolicy}
-        />
-      </main>
+        {/* Right Panel (Map Canvas Only) */}
+        <main className="w-2/3 h-full p-6 bg-[#121212] overflow-hidden">
+          <GridCanvas
+            households={displayedHouseholds}
+            centers={centers}
+            schools={schools}
+            clusterRadius={params.clusterRadius}
+            mapViewPolicy={mapViewPolicy}
+            onMapViewPolicyChange={setMapViewPolicy}
+          />
+        </main>
+      </div>
 
       {/* Bulk Run detailed interactive report modal overlay */}
       {isBulkReportModalOpen && (

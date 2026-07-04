@@ -63,12 +63,12 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
   const ticks = Array.from({ length: 11 }, (_, i) => i * 50);
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-xl shadow-xl flex flex-col h-full">
+    <div className="bg-[#222222] border border-[#333333] rounded-2xl p-6 backdrop-blur-xl shadow-xl flex flex-col h-full">
       {/* Canvas Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
-          <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-            <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <h2 className="font-heading tracking-wider text-xl text-slate-100 flex items-center gap-2 uppercase">
+            <svg className="w-5 h-5 text-protest-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
             </svg>
             Spatial Map Grid
@@ -78,13 +78,13 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
               500x500 geographic space. Fills show school catchments.
             </p>
             <span className="text-slate-700 hidden sm:inline">•</span>
-            <div className="flex items-center gap-0.5 bg-slate-950 p-0.5 rounded-lg border border-slate-800/80">
+            <div className="flex items-center gap-0.5 bg-[#121212] p-0.5 rounded border border-[#333333]">
               <button
                 type="button"
                 onClick={() => onMapViewPolicyChange('catchment')}
-                className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all duration-150 cursor-pointer ${
+                className={`px-2 py-0.5 rounded text-[9px] font-heading tracking-wider uppercase transition-all duration-150 cursor-pointer ${
                   mapViewPolicy === 'catchment'
-                    ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                    ? 'bg-protest-blue text-black font-extrabold shadow-sm'
                     : 'text-slate-500 hover:text-slate-350'
                 }`}
               >
@@ -93,9 +93,9 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
               <button
                 type="button"
                 onClick={() => onMapViewPolicyChange('nearest')}
-                className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all duration-150 cursor-pointer ${
+                className={`px-2 py-0.5 rounded text-[9px] font-heading tracking-wider uppercase transition-all duration-150 cursor-pointer ${
                   mapViewPolicy === 'nearest'
-                    ? 'bg-emerald-650 text-white shadow-sm font-extrabold'
+                    ? 'bg-protest-green text-black font-extrabold shadow-sm'
                     : 'text-slate-500 hover:text-slate-350'
                 }`}
               >
@@ -104,7 +104,6 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
             </div>
           </div>
         </div>
-
         {/* Legend / Quick Filter */}
         <div className="flex flex-wrap gap-2 text-xs">
           <button
@@ -114,8 +113,8 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
             }}
             className={`px-2.5 py-1 rounded-md font-semibold border transition-all cursor-pointer ${
               filterType === 'all' && !selectedSettlementFilter
-                ? 'bg-slate-850 border-slate-700 text-white'
-                : 'bg-slate-950 border-slate-900 text-slate-400 hover:text-slate-200'
+                ? 'bg-[#333333] border-[#444444] text-white'
+                : 'bg-[#121212] border-[#333333] text-slate-400 hover:text-slate-200'
             }`}
           >
             All ({households.length})
@@ -128,11 +127,11 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
             }}
             className={`px-2.5 py-1 rounded-md font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${
               filterType === 'village' && !selectedSettlementFilter
-                ? 'bg-indigo-950/40 border-indigo-850/60 text-indigo-300'
-                : 'bg-slate-950 border-slate-900 text-slate-400 hover:text-slate-200'
+                ? 'bg-protest-yellow/10 border-protest-yellow/30 text-protest-yellow'
+                : 'bg-[#121212] border-[#333333] text-slate-400 hover:text-slate-200'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block" />
+            <span className="w-2 h-2 rounded-full bg-protest-yellow inline-block" />
             Village Clusters ({households.filter((h) => h.type === 'village').length})
           </button>
 
@@ -143,20 +142,19 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
             }}
             className={`px-2.5 py-1 rounded-md font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${
               filterType === 'isolated'
-                ? 'bg-rose-950/40 border-rose-850/60 text-rose-350'
-                : 'bg-slate-950 border-slate-900 text-slate-400 hover:text-slate-200'
+                ? 'bg-protest-pink/10 border-protest-pink/30 text-protest-pink'
+                : 'bg-[#121212] border-[#333333] text-slate-400 hover:text-slate-200'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
+            <span className="w-2 h-2 rounded-full bg-protest-pink inline-block" />
             Isolated Outliers ({households.filter((h) => h.type === 'isolated').length})
           </button>
         </div>
       </div>
-
       {/* Map Inspector status bar row */}
-      <div className="bg-slate-950/60 border border-slate-800 rounded-lg p-3 min-h-[50px] mb-4 text-xs text-slate-350 backdrop-blur-md shadow-lg flex items-center justify-between">
+      <div className="bg-black/60 border border-[#333333] rounded-lg p-3 min-h-[50px] mb-4 text-xs text-slate-350 backdrop-blur-md shadow-lg flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="text-[10px] text-indigo-400 font-bold tracking-wide uppercase border-r border-slate-800 pr-3">
+          <div className="text-[10px] text-protest-yellow font-heading tracking-wider uppercase border-r border-[#333333] pr-3">
             Map Inspector (V2.1 - Repositioning Active)
           </div>
           {hoveredPoint ? (
@@ -179,8 +177,8 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                         : 'color' in hoveredPoint
                         ? hoveredPoint.color
                         : hoveredPoint.type === 'isolated'
-                        ? '#f43f5e'
-                        : centers.find((c) => c.id === hoveredPoint.settlementId)?.color || '#6366f1',
+                        ? '#ff2a85'
+                        : centers.find((c) => c.id === hoveredPoint.settlementId)?.color || '#ffd500',
                   }}
                 />
                 <span className="capitalize text-[10px] text-slate-400">
@@ -203,16 +201,16 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-3">
-              <div className="text-slate-500 italic text-[10px]">
+              <div className="text-slate-550 italic text-[10px]">
                 Hover over pins or dots to inspect...
               </div>
               {!diagnostics.isClean && (
-                <div className="text-rose-400 font-semibold text-[10px] px-2 py-0.5 rounded border border-rose-950/40 bg-rose-950/10 animate-pulse">
+                <div className="text-protest-pink font-semibold text-[10px] px-2 py-0.5 rounded border border-protest-pink/30 bg-protest-pink/10 animate-pulse">
                   ⚠️ Catchment Gap at {diagnostics.uncoveredCorners.join(', ')}! Please Hard Reload (Ctrl+F5)
                 </div>
               )}
               {diagnostics.schoolCount > 3 && (
-                <div className="text-amber-400 font-semibold text-[10px] px-2 py-0.5 rounded border border-amber-950/40 bg-amber-950/10">
+                <div className="text-protest-yellow font-semibold text-[10px] px-2 py-0.5 rounded border border-protest-yellow/30 bg-protest-yellow/10">
                   ⚠️ Active Schools: {diagnostics.schoolCount} (Maximum 3 recommended). Please Hard Reload
                 </div>
               )}
@@ -220,7 +218,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
           )}
         </div>
         {hoveredPoint && (
-          <div className="font-mono text-indigo-300 text-[10px] bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+          <div className="font-mono text-protest-yellow text-[10px] bg-black/40 px-2 py-0.5 rounded border border-[#333333]">
             X: {hoveredPoint.x.toFixed(1)} | Y: {hoveredPoint.y.toFixed(1)}
           </div>
         )}
@@ -576,12 +574,12 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
       </div>
 
       {/* Collapsible Debug Panel */}
-      <div className="mt-4 pt-2 border-t border-slate-850">
+      <div className="mt-4 pt-2 border-t border-[#333333]">
         <details className="group">
-          <summary className="text-[10px] text-indigo-400 font-bold uppercase tracking-wide cursor-pointer select-none hover:text-indigo-300">
+          <summary className="text-[10px] text-protest-yellow font-heading tracking-wider uppercase cursor-pointer select-none hover:text-white">
             📊 Polygon Debug Coordinates
           </summary>
-          <div className="mt-2 space-y-1 font-mono text-[9px] text-slate-400 bg-slate-950 p-2 rounded border border-slate-900 overflow-x-auto max-h-[150px]">
+          <div className="mt-2 space-y-1 font-mono text-[9px] text-slate-450 bg-black/40 p-2 rounded border border-[#333333] overflow-x-auto max-h-[150px]">
             {schools.map((school) => (
               <div key={`debug-${school.id}`}>
                 <span className="font-bold" style={{ color: school.color }}>{school.name}:</span>{' '}
