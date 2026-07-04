@@ -364,22 +364,22 @@ function App() {
   return (
     <div className="h-screen max-h-screen w-full flex flex-col overflow-hidden bg-[#121212] text-white">
       {/* Top Header matching the financial app */}
-      <header className="bg-black border-b-2 border-protest-yellow px-[4%] py-4 flex justify-between items-center z-10 shadow-md">
+      <header className="bg-black border-b-2 border-protest-yellow px-[4%] py-[20px] flex justify-between items-center z-10 shadow-md sticky top-0">
         <div className="flex flex-col">
-          <h1 className="font-heading text-2xl md:text-3xl leading-none tracking-wider text-protest-yellow uppercase">
-            Independent Spatial Policy Model
-            <span className="text-[10px] font-sans font-medium bg-white/10 px-1.5 py-0.5 rounded ml-2.5 text-slate-300 align-middle">
+          <h1 className="font-heading text-[2.2rem] leading-[0.9] tracking-[1px] text-protest-yellow uppercase">
+            INDEPENDENT SPATIAL POLICY MODEL
+            <span className="text-[0.8rem] font-medium bg-white/10 px-[6px] py-[2px] rounded-[4px] align-middle ml-[8px] text-[#aaaaaa] font-sans font-normal normal-case">
               v2.2
             </span>
           </h1>
-          <div className="text-[10px] tracking-[2px] uppercase text-slate-400 font-bold mt-1">
+          <div className="text-[0.75rem] tracking-[2px] uppercase text-[#aaaaaa] font-bold mt-[4px]">
             Home to School Transport Policy Audit & Spatial Simulator
           </div>
         </div>
         <div>
           <button
             onClick={() => setIsHowItWorksOpen(true)}
-            className="px-4 py-2 bg-protest-pink hover:bg-[#ff54a1] active:scale-[0.98] text-black font-heading text-sm font-bold tracking-wider uppercase rounded transition-all duration-150 cursor-pointer shadow-md shadow-protest-pink/20"
+            className="px-[10px] py-[4px] bg-protest-pink hover:bg-protest-pink/90 active:scale-[0.98] text-black font-heading text-[1.1rem] font-bold tracking-[1px] uppercase rounded-[2px] transition-all duration-150 cursor-pointer"
           >
             How this model works
           </button>
