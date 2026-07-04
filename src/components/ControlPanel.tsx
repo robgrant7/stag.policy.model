@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import type { ScenarioParams, SettlementCenter, BulkRunResult } from '../types';
 
+const Tooltip: React.FC<{ text: string }> = ({ text }) => (
+  <span className="group relative cursor-help ml-1.5 inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-850 text-[10px] text-slate-400 font-bold hover:bg-protest-yellow hover:text-black transition-colors select-none z-10">
+    ?
+    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-48 hidden group-hover:block bg-black text-slate-200 border border-[#333333] text-[10px] rounded p-2 shadow-xl z-20 font-sans normal-case tracking-normal text-left font-normal leading-normal">
+      {text}
+    </span>
+  </span>
+);
+
 interface ControlPanelProps {
   params: ScenarioParams;
   onChangeParams: (params: ScenarioParams) => void;
@@ -109,23 +118,23 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   };
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-xl shadow-xl flex flex-col gap-6">
+    <div className="bg-[#121212] border border-[#333333] rounded-2xl p-6 backdrop-blur-xl shadow-xl flex flex-col gap-6">
       {/* Title */}
       <div>
         <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-          <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-protest-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
           </svg>
-          Scenario Configuration
+          Scenario Settings
         </h2>
         <p className="text-xs text-slate-400 mt-1">
-          Configure vehicle logistics and distribution parameters for parallel policy modeling.
+          Configure vehicle sizes, village shapes, and run rules to test transport costs.
         </p>
       </div>
 
       {/* Accordion Panels */}
       <div className="flex flex-col gap-4">
-        {/* Accordion 1: Vehicle Fleet Tiers */}
+        {/* 1. Bus & Taxi Cost Settings */}
         <div className="border-b border-[#333333] pb-4">
           <button
             type="button"
@@ -301,7 +310,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
           </div>
         </div>
 
-        {/* Accordion 2: Scenario Density Controls */}
+        {/* 2. Village & School Setup */}
         <div className="border-b border-[#333333] pb-4">
           <button
             type="button"
@@ -355,7 +364,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             {/* Settlement Count Dropdown */}
             <div className="space-y-2">
               <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                Number of Settlements
+                Number of Villages List
               </label>
               <select
                 value={params.settlementCount}
@@ -364,7 +373,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((count) => (
                   <option key={count} value={count}>
-                    {count} {count === 1 ? 'Settlement' : 'Settlements'}
+                    {count} {count === 1 ? 'Village' : 'Villages'}
                   </option>
                 ))}
               </select>
@@ -438,7 +447,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                           : 'bg-slate-950/60 border-slate-855 text-slate-400 hover:text-slate-200 hover:border-slate-800'
                       }`}
                     >
-                      <span className="font-extrabold text-[11px]">Feeder Settlement Unity</span>
+                      <span className="font-extrabold text-[11px]">Keep Villages Together</span>
                       <span className="text-[9px] font-normal text-slate-500 opacity-90">Community Rule</span>
                     </button>
                     
@@ -451,8 +460,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                           : 'bg-slate-950/60 border-slate-855 text-slate-400 hover:text-slate-200 hover:border-slate-800'
                       }`}
                     >
-                      <span className="font-extrabold text-[11px]">Historical Legacy Split</span>
-                      <span className="text-[9px] font-normal text-slate-500 opacity-90">Parental Preference</span>
+                      <span className="font-extrabold text-[11px]">Split Villages</span>
+                      <span className="text-[9px] font-normal text-slate-500 opacity-90">Parent Choice</span>
                     </button>
                   </div>
                 </div>
@@ -460,7 +469,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 {overlapRule === 'legacy_slider' && params.schoolCount === 2 && (
                   <div className="space-y-2 pt-1 bg-slate-950/40 border border-slate-855 p-4 rounded-xl">
                     <div className="flex justify-between text-[10px]">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Legacy Preference (A vs B)</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider flex items-center">Parent Choice Split (A vs B)<Tooltip text="The historical percentage division of student choice between School A and School B." /></span>
                       <span className="text-protest-yellow font-extrabold">{legacySplit.a}% / {100 - legacySplit.a}%</span>
                     </div>
                     <input
@@ -487,7 +496,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-350 uppercase tracking-wider">Attractiveness Sliders</span>
                       <span className="text-[10px] text-protest-yellow font-bold bg-protest-yellow/10 px-2 py-0.5 rounded-full border border-protest-yellow/20">
-                        Utility Multiplier
+                        Parent Preference
                       </span>
                     </div>
                     
@@ -537,7 +546,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
           </div>
         </div>
 
-        {/* Accordion 3: Settlement Registry & Archetypes */}
+        {/* 3. Custom Village Layouts */}
         <div className="border-b border-[#333333] pb-4">
           <button
             type="button"
@@ -568,16 +577,16 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 <button
                   type="button"
                   onClick={onResetVillages}
-                  className="text-[9px] font-bold text-rose-400 bg-rose-955/20 hover:bg-rose-955/40 border border-rose-900/40 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                  className="text-[9px] font-bold text-rose-450 bg-[#331111]/20 hover:bg-[#441111]/45 hover:bg-rose-955/40 border border-rose-900/40 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
                 >
-                  Reset All Settlements to Defaults
+                  Reset Villages
                 </button>
               )}
             </div>
             
             <div className="space-y-3">
               {centers.map((center) => (
-                <div key={center.id} className="bg-slate-900/50 border border-slate-800/80 p-4 rounded-xl space-y-3">
+                <div key={center.id} className="bg-black/40 border border-[#333333] p-4 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full border shadow-sm" style={{ backgroundColor: center.color, borderColor: center.color }} />
@@ -601,7 +610,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                             : 'bg-[#121212] text-slate-405 border-[#333333] hover:text-slate-200 hover:bg-[#1a1a1a]'
                         }`}
                       >
-                        Nucleated
+                        Clustered
                       </button>
                       <button
                         type="button"
@@ -612,7 +621,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                             : 'bg-[#121212] text-slate-405 border-[#333333] hover:text-slate-200 hover:bg-[#1a1a1a]'
                         }`}
                       >
-                        Linear
+                        Roadside
                       </button>
                     </div>
                   </div>
@@ -620,7 +629,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                   {/* Spread Slider */}
                   <div className="space-y-1">
                     <div className="flex justify-between text-[10px]">
-                      <span className="text-slate-400 font-medium">Cluster Spread</span>
+                      <span className="text-slate-400 font-medium flex items-center">Village Spread Size<Tooltip text="The physical spread area of this village cluster on the map." /></span>
                       <span className="text-protest-yellow font-bold">{center.dispersionRadius.toFixed(1)} u</span>
                     </div>
                     <input
@@ -639,7 +648,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
           </div>
         </div>
 
-        {/* Accordion 4: Bulk Simulation Run */}
+        {/* 4. Test Many Scenarios (Bulk Run) */}
         <div className="border-b border-[#333333] pb-4">
           <button
             type="button"
@@ -666,7 +675,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
           >
             <div className="space-y-3 p-3.5 bg-slate-955/40 border border-slate-855 rounded-xl">
               <p className="text-[11px] leading-relaxed text-slate-400">
-                Run randomized simulations in the background. Each run generates a unique geography (1-12 settlements, 1-6 schools, custom overlap, topology parameters, and school pull weight) to compare Catchment vs. Nearest School fleet costs.
+                Run multiple randomized scenarios in the background to see which policy is generally cheaper. Each scenario randomizes the layout, school locations, attractiveness choice, and student distribution.
               </p>
 
               {/* Number of Runs Input Box */}
@@ -723,14 +732,14 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Running Batch...
+                    Running Tests...
                   </>
                 ) : (
                   <>
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.7 15.3a6 6 0 0 1-8.4 0L3 12m0 0l3-3m-3 3h12m4 4v-1a3 3 0 0 0-3-3h-1m4-4V5a3 3 0 0 0-3-3h-2" />
                     </svg>
-                    Execute Bulk Simulation
+                    Start Bulk Test
                   </>
                 )}
               </button>
@@ -740,7 +749,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             {bulkRuns.length > 0 && !isBulking && (
               <div className="bg-[#222222] border border-[#333333] rounded-xl p-3.5 space-y-2.5 transition-all">
                 <div className="flex justify-between items-center text-[10px] font-bold text-slate-350 uppercase tracking-wider border-b border-[#333333] pb-1.5">
-                  <span>Batch Run Results ({bulkRuns.length} Runs)</span>
+                  <span>Test Run Results ({bulkRuns.length} Runs)</span>
                   <span className="text-emerald-450 font-extrabold uppercase">Complete</span>
                 </div>
                 
@@ -765,7 +774,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                           <span className="text-xs font-bold text-protest-green">{pctNearest}%</span>
                         </div>
                         <div className="bg-slate-900/50 p-1.5 rounded-lg">
-                          <span className="block text-[8px] text-slate-500 font-semibold uppercase">Neutral</span>
+                          <span className="block text-[8px] text-slate-500 font-semibold uppercase">Neutral / Ties</span>
                           <span className="text-xs font-bold text-slate-400">{pctTies}%</span>
                         </div>
                       </div>

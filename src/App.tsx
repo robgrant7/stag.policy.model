@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ControlPanel } from './components/ControlPanel';
 import { GridCanvas } from './components/GridCanvas';
-import { StatsOverlay } from './components/StatsOverlay';
 import { FinancialPanel } from './components/FinancialPanel';
 import type { Household, SettlementCenter, ScenarioParams, School, TransportPolicy, BulkRunResult } from './types';
 import { generateScenario, assignHouseholds, calculateFinancials, regenerateHouseholdsForCenters, runBulkSimulation } from './utils/generator';
@@ -52,6 +51,7 @@ function App() {
   const [isBulking, setIsBulking] = useState<boolean>(false);
   const [bulkProgress, setBulkProgress] = useState<number>(0);
   const [isBulkReportModalOpen, setIsBulkReportModalOpen] = useState<boolean>(false);
+  const [isHowItWorksOpen, setIsHowItWorksOpen] = useState<boolean>(false);
 
   // 3.5. Reactive Transport Operational Cost calculations (Parallel Costing)
   const financials = useMemo(() => {
@@ -376,15 +376,20 @@ function App() {
             Home to School Transport Policy Audit & Spatial Simulator
           </div>
         </div>
+        <div>
+          <button
+            onClick={() => setIsHowItWorksOpen(true)}
+            className="px-4 py-2 bg-protest-pink hover:bg-[#ff54a1] active:scale-[0.98] text-black font-heading text-sm font-bold tracking-wider uppercase rounded transition-all duration-150 cursor-pointer shadow-md shadow-protest-pink/20"
+          >
+            How this model works
+          </button>
+        </div>
       </header>
 
       {/* Main Container below Header */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel (Controls Sidebar) */}
         <aside className="w-1/3 h-full overflow-y-auto p-6 border-r border-[#333333] flex flex-col gap-6 bg-[#1a1a1a]">
-          
-          {/* Mini stats dashboard inside left panel */}
-          <StatsOverlay households={displayedHouseholds} centers={centers} schools={schools} />
 
           <ControlPanel
             params={params}
@@ -469,6 +474,108 @@ function App() {
           onClose={() => setIsBulkReportModalOpen(false)}
           onLoadRun={handleLoadBulkRun}
         />
+      )}
+
+      {/* Help Modal: How this model works */}
+      {isHowItWorksOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#121212] border border-[#333333] rounded-2xl w-full max-w-2xl h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 animate-duration-150">
+            {/* Header */}
+            <div className="p-5 border-b border-[#333333] flex justify-between items-center bg-black">
+              <h2 className="font-heading tracking-wider text-xl text-slate-100 uppercase">
+                📖 How This Model Works & Why It Is Truthful
+              </h2>
+              <button
+                onClick={() => setIsHowItWorksOpen(false)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#333333] text-slate-400 hover:text-white hover:bg-[#222222] transition-all cursor-pointer font-bold text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 text-sm text-slate-300 leading-relaxed font-sans">
+              <section className="space-y-2">
+                <h3 className="font-heading tracking-wider text-lg text-protest-yellow uppercase">Overview</h3>
+                <p>
+                  This model is a spatial audit tool built to calculate the exact travel costs under two competing school transport rules:
+                </p>
+                <ul className="list-disc list-inside space-y-1 pl-2">
+                  <li>
+                    <strong className="text-protest-blue">Catchment Policy</strong>: Children are sent to schools based on pre-defined administrative boundaries (catchment areas).
+                  </li>
+                  <li>
+                    <strong className="text-protest-green">Nearest Policy</strong>: School boundaries are ignored, and children are sent to whichever school is closest to their home by straight-line distance.
+                  </li>
+                </ul>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="font-heading tracking-wider text-lg text-protest-yellow uppercase">Step-by-Step Methodology</h3>
+                <ol className="list-decimal list-inside space-y-3 pl-2">
+                  <li>
+                    <strong>Generating the Map</strong>: The simulator sets up a 500x500 grid representing a rural area. It generates a user-defined number of village centers and scattered remote homes (isolated outliers).
+                  </li>
+                  <li>
+                    <strong>Placing Schools</strong>: Schools are placed at the centers of selected villages. Catchment boundaries are drawn around them.
+                  </li>
+                  <li>
+                    <strong>Assigning Students</strong>:
+                    <ul className="list-disc list-inside space-y-1 pl-4 mt-1">
+                      <li>Under the <strong>Nearest Policy</strong>, every house goes to its closest school.</li>
+                      <li>
+                        Under the <strong>Catchment Policy</strong>, houses inside overlapping boundaries are assigned based on choice. The **Feeder Settlement Unity** rule keeps villages together by routing the whole village to the school closest to its center. The **Legacy Preference** rule splits the village using a ratio slider.
+                      </li>
+                    </ul>
+                  </li>
+                  <li>
+                    <strong>Hiring the Transport Fleet</strong>: The model groups students in each village zone heading to the same school, and hires vehicles to fit them:
+                    <ul className="list-disc list-inside space-y-1 pl-4 mt-1">
+                      <li>If student count is at least the <strong>Coach Threshold</strong>, it hires a Coach (up to 50 capacity, costing £500/day).</li>
+                      <li>If student count is at least the <strong>Minibus Threshold</strong>, it hires a Minibus (up to 16 capacity, costing £250/day).</li>
+                      <li>Otherwise, it hires <strong>Taxis</strong> (up to 2 capacity, costing £150/day) to carry the remaining students.</li>
+                      <li>Isolated outliers cannot walk to group bus stops, so they always travel in individual Taxis.</li>
+                    </ul>
+                  </li>
+                  <li>
+                    <strong>Total Cost Sum</strong>: The daily cost of the hired Coaches, Minibuses, and Taxis is calculated for both policies to find the cheaper option.
+                  </li>
+                </ol>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="font-heading tracking-wider text-lg text-protest-yellow uppercase">Truthful Operational Assumptions</h3>
+                <p>
+                  To remain accurate, this model uses real-world transport constraints:
+                </p>
+                <ul className="list-disc list-inside space-y-2 pl-2">
+                  <li>
+                    <strong>Straight-Line Distance</strong>: Distances are calculated in a straight line. In reality, winding country lanes make journeys longer and taxis more expensive.
+                    <span className="block text-xs text-slate-500 italic mt-0.5">Truth: Real costs are likely higher than shown here.</span>
+                  </li>
+                  <li>
+                    <strong>No Shared Multi-Village Routes</strong>: Buses do not pick up students from multiple separate villages. 
+                    <span className="block text-xs text-slate-500 italic mt-0.5">Truth: Consolidating routes might reduce some costs, but sparse rural geography makes this highly difficult in practice.</span>
+                  </li>
+                  <li>
+                    <strong>Perfect Contract Consolidation</strong>: The model assumes the council instantly replaces taxis with minibuses or coaches when thresholds are met.
+                    <span className="block text-xs text-slate-500 italic mt-0.5">Truth: Contract renegotiations are slow, so actual council transition costs will be higher.</span>
+                  </li>
+                </ul>
+              </section>
+            </div>
+            
+            {/* Footer */}
+            <div className="p-4 border-t border-[#333333] bg-black/40 flex justify-end">
+              <button
+                onClick={() => setIsHowItWorksOpen(false)}
+                className="px-4 py-2 bg-protest-yellow hover:bg-[#ffe240] text-black font-heading text-sm font-bold tracking-wider uppercase rounded cursor-pointer"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
