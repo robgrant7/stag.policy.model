@@ -547,6 +547,23 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
           })}
         </div>
       </div>
+
+      {/* Collapsible Debug Panel */}
+      <div className="mt-4 pt-2 border-t border-slate-850">
+        <details className="group">
+          <summary className="text-[10px] text-indigo-400 font-bold uppercase tracking-wide cursor-pointer select-none hover:text-indigo-300">
+            📊 Polygon Debug Coordinates
+          </summary>
+          <div className="mt-2 space-y-1 font-mono text-[9px] text-slate-400 bg-slate-950 p-2 rounded border border-slate-900 overflow-x-auto max-h-[150px]">
+            {schools.map((school) => (
+              <div key={`debug-${school.id}`}>
+                <span className="font-bold" style={{ color: school.color }}>{school.name}:</span>{' '}
+                {JSON.stringify(school.polygons || [school.polygon])}
+              </div>
+            ))}
+          </div>
+        </details>
+      </div>
     </div>
   );
 };
