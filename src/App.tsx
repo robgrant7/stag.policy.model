@@ -33,7 +33,7 @@ function App() {
   });
   
   // Cost Per Pupil State
-  const [catchmentCostPerPupil, setCatchmentCostPerPupil] = useState<number>(4.50);
+  const [catchmentCostPerPupil, setCatchmentCostPerPupil] = useState<number>(10.00);
 
   // 3. Scenario Data State
   const [households, setHouseholds] = useState<Household[]>([]);

@@ -1094,7 +1094,7 @@ export function calculateFinancials(
   centers: SettlementCenter[],
   activePolicy: TransportPolicy,
   schools: School[] = [],
-  catchmentCostPerPupil: number = 4.50
+  catchmentCostPerPupil: number = 10.00
 ): FinancialReport {
   const sortedSchools = [...schools].sort((a, b) => a.x - b.x);
 
