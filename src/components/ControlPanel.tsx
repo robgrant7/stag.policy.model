@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { ScenarioParams, SettlementCenter } from '../types';
+import type { ScenarioParams, SettlementCenter, BulkRunResult } from '../types';
 
 interface ControlPanelProps {
   params: ScenarioParams;
@@ -33,6 +33,13 @@ interface ControlPanelProps {
   onChangeTaxiCapacity: (val: number) => void;
   taxiCost: number;
   onChangeTaxiCost: (val: number) => void;
+
+  // Bulk Run Props
+  bulkRuns: BulkRunResult[];
+  isBulking: boolean;
+  bulkProgress: number;
+  onRunBulk: (count: number) => void;
+  onOpenBulkReport: () => void;
 }
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({
@@ -66,6 +73,12 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   onChangeTaxiCapacity,
   taxiCost,
   onChangeTaxiCost,
+
+  bulkRuns,
+  isBulking,
+  bulkProgress,
+  onRunBulk,
+  onOpenBulkReport,
 }) => {
   // All accordions collapsed by default
   const [activeAccordion, setActiveAccordion] = useState<string | null>(null);
@@ -623,6 +636,156 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* Accordion 4: Bulk Simulation Run */}
+        <div className="border-b border-slate-800 pb-4">
+          <button
+            type="button"
+            onClick={() => toggleAccordion('bulk')}
+            className="w-full flex items-center justify-between py-2 text-xs font-bold text-slate-300 hover:text-slate-100 transition-colors uppercase tracking-wider cursor-pointer select-none"
+          >
+            <span className="flex items-center gap-2">
+              <span className="text-indigo-400 text-sm">🧪</span> Accordion 4: Bulk Simulation Run
+            </span>
+            <svg
+              className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeAccordion === 'bulk' ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          <div
+            className={`transition-all duration-300 ease-in-out overflow-hidden ${
+              activeAccordion === 'bulk' ? 'max-h-[800px] opacity-100 mt-4 space-y-4' : 'max-h-0 opacity-0 pointer-events-none'
+            }`}
+          >
+            <div className="space-y-3 p-3.5 bg-slate-955/40 border border-slate-855 rounded-xl">
+              <p className="text-[11px] leading-relaxed text-slate-400">
+                Run randomized simulations in the background. Each run generates a unique geography (1-12 settlements, 1-6 schools, custom overlap, topology parameters, and school pull weight) to compare Catchment vs. Nearest School fleet costs.
+              </p>
+
+              {/* Number of Runs Dropdown */}
+              <div className="space-y-1.5">
+                <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                  Number of Simulation Runs
+                </label>
+                <select
+                  id="bulk-runs-count"
+                  defaultValue="50"
+                  className="w-full bg-slate-950 text-slate-200 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+                >
+                  <option value="10">10 Runs</option>
+                  <option value="50">50 Runs</option>
+                  <option value="100">100 Runs</option>
+                  <option value="250">250 Runs</option>
+                  <option value="500">500 Runs</option>
+                </select>
+              </div>
+
+              {/* Progress indicator */}
+              {isBulking && (
+                <div className="space-y-2 pt-2 border-t border-slate-900">
+                  <div className="flex justify-between text-[10px] text-slate-400 font-bold">
+                    <span>Simulating runs...</span>
+                    <span className="text-indigo-400 font-black">{bulkProgress}%</span>
+                  </div>
+                  <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-900">
+                    <div
+                      className="bg-gradient-to-r from-indigo-500 to-violet-500 h-full transition-all duration-150 ease-out"
+                      style={{ width: `${bulkProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Simulation Trigger Button */}
+              <button
+                type="button"
+                disabled={isBulking}
+                onClick={() => {
+                  const selectEl = document.getElementById('bulk-runs-count') as HTMLSelectElement;
+                  const count = selectEl ? parseInt(selectEl.value) : 50;
+                  onRunBulk(count);
+                }}
+                className={`w-full py-2 px-4 rounded-xl text-xs font-bold transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer ${
+                  isBulking
+                    ? 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed'
+                    : 'bg-indigo-600/90 hover:bg-indigo-600 border border-indigo-500/20 text-slate-100 active:scale-[0.98]'
+                }`}
+              >
+                {isBulking ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5 text-slate-600" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Running Batch...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.7 15.3a6 6 0 0 1-8.4 0L3 12m0 0l3-3m-3 3h12m4 4v-1a3 3 0 0 0-3-3h-1m4-4V5a3 3 0 0 0-3-3h-2" />
+                    </svg>
+                    Execute Bulk Simulation
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Quick summary stats of previous run if any */}
+            {bulkRuns.length > 0 && !isBulking && (
+              <div className="bg-slate-955 border border-slate-900 rounded-xl p-3.5 space-y-2.5 transition-all">
+                <div className="flex justify-between items-center text-[10px] font-bold text-slate-350 uppercase tracking-wider border-b border-slate-900 pb-1.5">
+                  <span>Batch Run Results ({bulkRuns.length} Runs)</span>
+                  <span className="text-emerald-400 font-extrabold uppercase">Complete</span>
+                </div>
+                
+                {(() => {
+                  const catchmentCheaper = bulkRuns.filter((r) => r.metrics.deficit < 0).length;
+                  const nearestCheaper = bulkRuns.filter((r) => r.metrics.deficit > 0).length;
+                  const ties = bulkRuns.filter((r) => r.metrics.deficit === 0).length;
+
+                  const pctCatchment = Math.round((catchmentCheaper / bulkRuns.length) * 100);
+                  const pctNearest = Math.round((nearestCheaper / bulkRuns.length) * 100);
+                  const pctTies = Math.round((ties / bulkRuns.length) * 100);
+
+                  return (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-1 text-center">
+                        <div className="bg-slate-900/50 p-1.5 rounded-lg">
+                          <span className="block text-[8px] text-slate-500 font-semibold uppercase">Catchment</span>
+                          <span className="text-xs font-bold text-indigo-400">{pctCatchment}%</span>
+                        </div>
+                        <div className="bg-slate-900/50 p-1.5 rounded-lg">
+                          <span className="block text-[8px] text-slate-500 font-semibold uppercase">Nearest</span>
+                          <span className="text-xs font-bold text-emerald-400">{pctNearest}%</span>
+                        </div>
+                        <div className="bg-slate-900/50 p-1.5 rounded-lg">
+                          <span className="block text-[8px] text-slate-500 font-semibold uppercase">Neutral</span>
+                          <span className="text-xs font-bold text-slate-400">{pctTies}%</span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={onOpenBulkReport}
+                        className="w-full py-2 px-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-200 hover:text-white rounded-lg text-[10.5px] font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
+                        </svg>
+                        Open Interactive Report
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         </div>
       </div>

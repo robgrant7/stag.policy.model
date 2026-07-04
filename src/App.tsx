@@ -3,8 +3,9 @@ import { ControlPanel } from './components/ControlPanel';
 import { GridCanvas } from './components/GridCanvas';
 import { StatsOverlay } from './components/StatsOverlay';
 import { FinancialPanel } from './components/FinancialPanel';
-import type { Household, SettlementCenter, ScenarioParams, School, TransportPolicy } from './types';
-import { generateScenario, assignHouseholds, calculateFinancials, regenerateHouseholdsForCenters } from './utils/generator';
+import type { Household, SettlementCenter, ScenarioParams, School, TransportPolicy, BulkRunResult } from './types';
+import { generateScenario, assignHouseholds, calculateFinancials, regenerateHouseholdsForCenters, runBulkSimulation } from './utils/generator';
+import { BulkReportModal } from './components/BulkReportModal';
 
 function App() {
   // 1. Parameter State
@@ -42,10 +43,15 @@ function App() {
   const [taxiCapacity, setTaxiCapacity] = useState<number>(2);
   const [taxiCost, setTaxiCost] = useState<number>(150);
 
-  // 3. Scenario Data State
   const [households, setHouseholds] = useState<Household[]>([]);
   const [centers, setCenters] = useState<SettlementCenter[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
+
+  // Bulk Simulation States
+  const [bulkRuns, setBulkRuns] = useState<BulkRunResult[]>([]);
+  const [isBulking, setIsBulking] = useState<boolean>(false);
+  const [bulkProgress, setBulkProgress] = useState<number>(0);
+  const [isBulkReportModalOpen, setIsBulkReportModalOpen] = useState<boolean>(false);
 
   // 3.5. Reactive Transport Operational Cost calculations (Parallel Costing)
   const financials = useMemo(() => {
@@ -126,6 +132,78 @@ function App() {
   useEffect(() => {
     handleGenerate();
   }, []);
+
+  // Execute Bulk Simulation Runs concurrently in async chunks
+  const handleRunBulk = (count: number) => {
+    setIsBulking(true);
+    setBulkProgress(0);
+    setBulkRuns([]);
+
+    const vehicleParams = {
+      coachCapacity,
+      coachThreshold,
+      coachCost,
+      minibusCapacity,
+      minibusThreshold,
+      minibusCost,
+      taxiCapacity,
+      taxiCost,
+    };
+
+    const allResults: BulkRunResult[] = [];
+    const chunkSize = Math.max(1, Math.floor(count / 10)); // Chunk size (runs 10 blocks)
+
+    const runChunk = (startIndex: number) => {
+      if (startIndex >= count) {
+        setBulkRuns(allResults);
+        setIsBulking(false);
+        setBulkProgress(100);
+        setIsBulkReportModalOpen(true);
+        return;
+      }
+
+      const endIndex = Math.min(count, startIndex + chunkSize);
+      const chunkCount = endIndex - startIndex;
+
+      const chunkResults = runBulkSimulation(chunkCount, vehicleParams);
+
+      chunkResults.forEach((r, idx) => {
+        r.runId = startIndex + idx + 1;
+        allResults.push(r);
+      });
+
+      const progressPercent = Math.round((endIndex / count) * 100);
+      setBulkProgress(progressPercent);
+
+      setTimeout(() => {
+        runChunk(endIndex);
+      }, 50);
+    };
+
+    // Trigger run loop
+    setTimeout(() => {
+      runChunk(0);
+    }, 50);
+  };
+
+  const handleLoadBulkRun = (run: BulkRunResult) => {
+    const newParams: ScenarioParams = {
+      settlementCount: run.params.settlementCount,
+      schoolCount: run.params.schoolCount,
+      villageCount: run.params.villageCount,
+      isolatedPercentage: run.params.isolatedPercentage,
+      isolatedCount: run.params.isolatedCount,
+      clusterRadius: run.params.clusterRadius,
+    };
+    setParams(newParams);
+    setCenters(run.data.centers);
+    setSchools(run.data.schools);
+    setHouseholds(run.data.households);
+    setOverlapRule(run.params.overlapRule);
+    setLegacySplit(run.params.legacySplit);
+    setAttractiveness(run.params.attractiveness);
+    setIsBulkReportModalOpen(false);
+  };
 
   // Sync parameter changes and trigger re-generation if counts change
   const handleChangeParams = (newParams: ScenarioParams) => {
@@ -310,6 +388,12 @@ function App() {
           onChangeTaxiCapacity={setTaxiCapacity}
           taxiCost={taxiCost}
           onChangeTaxiCost={setTaxiCost}
+          // Bulk Run Props
+          bulkRuns={bulkRuns}
+          isBulking={isBulking}
+          bulkProgress={bulkProgress}
+          onRunBulk={handleRunBulk}
+          onOpenBulkReport={() => setIsBulkReportModalOpen(true)}
         />
 
         <FinancialPanel
@@ -348,6 +432,15 @@ function App() {
           onMapViewPolicyChange={setMapViewPolicy}
         />
       </main>
+
+      {/* Bulk Run detailed interactive report modal overlay */}
+      {isBulkReportModalOpen && (
+        <BulkReportModal
+          runs={bulkRuns}
+          onClose={() => setIsBulkReportModalOpen(false)}
+          onLoadRun={handleLoadBulkRun}
+        />
+      )}
     </div>
   );
 }

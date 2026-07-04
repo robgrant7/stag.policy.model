@@ -1,4 +1,4 @@
-import type { Household, SettlementCenter, School, ScenarioParams, TransportPolicy } from '../types';
+import type { Household, SettlementCenter, School, ScenarioParams, TransportPolicy, BulkRunResult } from '../types';
 
 // Preset colors for the settlement clusters
 const CLUSTER_COLORS = [
@@ -1448,4 +1448,122 @@ export function regenerateHouseholdsForCenters(
   }
 
   return repositionUncoveredHouseholds(households, _schools, centers);
+}
+
+export function runBulkSimulation(
+  count: number,
+  vehicleParams: {
+    coachCapacity: number;
+    coachThreshold: number;
+    coachCost: number;
+    minibusCapacity: number;
+    minibusThreshold: number;
+    minibusCost: number;
+    taxiCapacity: number;
+    taxiCost: number;
+  }
+): BulkRunResult[] {
+  const results: BulkRunResult[] = [];
+  
+  for (let i = 0; i < count; i++) {
+    // 1. Randomize parameters
+    const settlementCount = Math.floor(Math.random() * 12) + 1; // 1 to 12
+    const schoolCount = Math.floor(Math.random() * 6) + 1; // 1 to 6
+    const villageCount = Math.floor(Math.random() * 201) + 50; // 50 to 250
+    const isolatedPercentage = [5, 10, 15, 20, 25, 30][Math.floor(Math.random() * 6)];
+    
+    const pct = isolatedPercentage;
+    const total = Math.round(villageCount / (1 - pct / 100));
+    const isolatedCount = Math.round(total * (pct / 100));
+    const clusterRadius = Math.floor(Math.random() * 12) + 4; // 4 to 15
+    const overlapRule = Math.random() < 0.5 ? 'community' : 'legacy_slider';
+    
+    // Attractiveness: random for each school from -2.0 to 2.0 (step 0.5)
+    const SCHOOL_IDS = ['school-a', 'school-b', 'school-c', 'school-d', 'school-e', 'school-f'];
+    const attractiveness: Record<string, number> = {};
+    SCHOOL_IDS.forEach((id) => {
+      attractiveness[id] = Math.round((-2.0 + Math.random() * 4.0) * 2) / 2; // -2.0 to 2.0 in steps of 0.5
+    });
+
+    // Random legacy split if legacy_slider is chosen
+    const r1 = Math.random();
+    const r2 = Math.random() * (1 - r1);
+    const legacySplit = {
+      a: Math.round(r1 * 100),
+      b: Math.round(r2 * 100),
+      c: Math.round((1 - r1 - r2) * 100),
+    };
+    
+    // 2. Generate scenario
+    const { households: rawHouseholds, centers, schools } = generateScenario({
+      settlementCount,
+      schoolCount,
+      villageCount,
+      isolatedCount,
+      clusterRadius,
+    });
+    
+    // 3. Snap/reposition households to catchments (using catchment policy by default)
+    const snappedHouseholds = assignHouseholds(
+      rawHouseholds,
+      schools,
+      'catchment',
+      overlapRule,
+      legacySplit,
+      centers,
+      attractiveness,
+      true // repositionUncovered = true
+    );
+
+    // 4. Calculate financials on the snapped households
+    const financials = calculateFinancials(
+      snappedHouseholds,
+      centers,
+      schools,
+      vehicleParams.coachCapacity,
+      vehicleParams.coachThreshold,
+      vehicleParams.coachCost,
+      vehicleParams.minibusCapacity,
+      vehicleParams.minibusThreshold,
+      vehicleParams.minibusCost,
+      vehicleParams.taxiCapacity,
+      vehicleParams.taxiCost,
+      overlapRule,
+      legacySplit,
+      attractiveness
+    );
+
+    results.push({
+      runId: i + 1,
+      params: {
+        settlementCount,
+        schoolCount,
+        villageCount,
+        isolatedPercentage,
+        isolatedCount,
+        clusterRadius,
+        overlapRule,
+        legacySplit,
+        attractiveness,
+      },
+      metrics: {
+        catchmentCost: financials.catchmentCost,
+        nearestCost: financials.nearestCost,
+        deficit: financials.deficit,
+        catchmentCoaches: financials.catchmentCoaches,
+        catchmentMinibuses: financials.catchmentMinibuses,
+        catchmentTaxis: financials.catchmentTaxis,
+        nearestCoaches: financials.nearestCoaches,
+        nearestMinibuses: financials.nearestMinibuses,
+        nearestTaxis: financials.nearestTaxis,
+      },
+      data: {
+        households: snappedHouseholds,
+        centers,
+        schools,
+      },
+    });
+  }
+  
+  return results;
 }

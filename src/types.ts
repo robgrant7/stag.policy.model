@@ -49,3 +49,34 @@ export interface ScenarioParams {
   taxiCapacity?: number;
   taxiCost?: number;
 }
+
+export interface BulkRunResult {
+  runId: number;
+  params: {
+    settlementCount: number;
+    schoolCount: number;
+    villageCount: number;
+    isolatedPercentage: number;
+    isolatedCount: number;
+    clusterRadius: number;
+    overlapRule: 'community' | 'legacy_slider';
+    legacySplit: { a: number; b: number; c: number };
+    attractiveness: Record<string, number>;
+  };
+  metrics: {
+    catchmentCost: number;
+    nearestCost: number;
+    deficit: number;
+    catchmentCoaches: number;
+    catchmentMinibuses: number;
+    catchmentTaxis: number;
+    nearestCoaches: number;
+    nearestMinibuses: number;
+    nearestTaxis: number;
+  };
+  data: {
+    households: Household[];
+    centers: SettlementCenter[];
+    schools: School[];
+  };
+}
