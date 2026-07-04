@@ -32,8 +32,15 @@ function App() {
     'school-f': 0.0,
   });
   
-  // Cost Per Pupil State
-  const [catchmentCostPerPupil, setCatchmentCostPerPupil] = useState<number>(10.00);
+  // Vehicle Parameter States
+  const [coachCapacity, setCoachCapacity] = useState<number>(50);
+  const [coachThreshold, setCoachThreshold] = useState<number>(30);
+  const [coachCost, setCoachCost] = useState<number>(300);
+  const [minibusCapacity, setMinibusCapacity] = useState<number>(16);
+  const [minibusThreshold, setMinibusThreshold] = useState<number>(8);
+  const [minibusCost, setMinibusCost] = useState<number>(120);
+  const [taxiCapacity, setTaxiCapacity] = useState<number>(4);
+  const [taxiCost, setTaxiCost] = useState<number>(50);
 
   // 3. Scenario Data State
   const [households, setHouseholds] = useState<Household[]>([]);
@@ -42,8 +49,40 @@ function App() {
 
   // 3.5. Reactive Transport Operational Cost calculations
   const financials = useMemo(() => {
-    return calculateFinancials(households, centers, transportPolicy, schools, catchmentCostPerPupil);
-  }, [households, centers, transportPolicy, schools, catchmentCostPerPupil]);
+    return calculateFinancials(
+      households,
+      centers,
+      transportPolicy,
+      schools,
+      coachCapacity,
+      coachThreshold,
+      coachCost,
+      minibusCapacity,
+      minibusThreshold,
+      minibusCost,
+      taxiCapacity,
+      taxiCost,
+      overlapRule,
+      legacySplit,
+      attractiveness
+    );
+  }, [
+    households,
+    centers,
+    transportPolicy,
+    schools,
+    coachCapacity,
+    coachThreshold,
+    coachCost,
+    minibusCapacity,
+    minibusThreshold,
+    minibusCost,
+    taxiCapacity,
+    taxiCost,
+    overlapRule,
+    legacySplit,
+    attractiveness
+  ]);
 
   // 4. Scenario generator trigger
   const handleGenerate = (
@@ -170,7 +209,17 @@ function App() {
         metadata: {
           generatedAt: new Date().toISOString(),
           activePolicy: transportPolicy,
-          parameters: { ...params, catchmentCostPerPupil },
+          parameters: {
+            ...params,
+            coachCapacity,
+            coachThreshold,
+            coachCost,
+            minibusCapacity,
+            minibusThreshold,
+            minibusCost,
+            taxiCapacity,
+            taxiCost,
+          },
           summary: {
             totalHouseholds: households.length,
             villageHouseholds: households.filter(h => h.type === 'village').length,
@@ -244,8 +293,22 @@ function App() {
           centers={centers}
           onUpdateVillage={handleUpdateVillage}
           onResetVillages={handleResetVillages}
-          catchmentCostPerPupil={catchmentCostPerPupil}
-          onCatchmentCostChange={setCatchmentCostPerPupil}
+          coachCapacity={coachCapacity}
+          onChangeCoachCapacity={setCoachCapacity}
+          coachThreshold={coachThreshold}
+          onChangeCoachThreshold={setCoachThreshold}
+          coachCost={coachCost}
+          onChangeCoachCost={setCoachCost}
+          minibusCapacity={minibusCapacity}
+          onChangeMinibusCapacity={setMinibusCapacity}
+          minibusThreshold={minibusThreshold}
+          onChangeMinibusThreshold={setMinibusThreshold}
+          minibusCost={minibusCost}
+          onChangeMinibusCost={setMinibusCost}
+          taxiCapacity={taxiCapacity}
+          onChangeTaxiCapacity={setTaxiCapacity}
+          taxiCost={taxiCost}
+          onChangeTaxiCost={setTaxiCost}
         />
 
         <FinancialPanel

@@ -1084,6 +1084,9 @@ export interface FinancialReport {
     fragmentedCount: number;
     distribution: { schoolId: string; count: number }[];
   }[];
+  activeCoaches: number;
+  activeMinibuses: number;
+  activeTaxis: number;
 }
 
 /**
@@ -1094,109 +1097,160 @@ export function calculateFinancials(
   centers: SettlementCenter[],
   activePolicy: TransportPolicy,
   schools: School[] = [],
-  catchmentCostPerPupil: number = 10.00
+  coachCapacity: number = 50,
+  coachThreshold: number = 30,
+  coachCost: number = 300,
+  minibusCapacity: number = 16,
+  minibusThreshold: number = 8,
+  minibusCost: number = 120,
+  taxiCapacity: number = 4,
+  taxiCost: number = 50,
+  overlapRule: 'community' | 'legacy_slider' = 'community',
+  legacySplit: { a: number; b: number; c: number } = { a: 40, b: 30, c: 30 },
+  attractiveness: Record<string, number> = {}
 ): FinancialReport {
   const sortedSchools = [...schools].sort((a, b) => a.x - b.x);
 
-  // Group households by cohort
-  const villageCohorts: Record<string, Household[]> = {};
-  const isolatedCohort: Household[] = [];
-  
-  households.forEach((h) => {
-    if (h.type === 'village' && h.settlementId) {
-      if (!villageCohorts[h.settlementId]) {
-        villageCohorts[h.settlementId] = [];
-      }
-      villageCohorts[h.settlementId].push(h);
-    } else {
-      isolatedCohort.push(h);
-    }
-  });
+  // Compute assignments for both policies to generate comparison reports
+  const assignedCatchment = activePolicy === 'catchment'
+    ? households
+    : assignHouseholds(households, schools, 'catchment', overlapRule, legacySplit, centers, attractiveness, false);
 
-  const runCostCalculation = (policy: TransportPolicy) => {
+  const assignedNearest = activePolicy === 'nearest'
+    ? households
+    : assignHouseholds(households, schools, 'nearest', overlapRule, legacySplit, centers, attractiveness, false);
+
+  const computeVehicleCost = (assignedHouseholds: Household[]) => {
     let totalCost = 0;
-    const splitsList: FinancialReport['splits'] = [];
+    let coachesCount = 0;
+    let minibusesCount = 0;
+    let taxisCount = 0;
 
-    const calculateCohortCost = (cohortHouseholds: Household[], centerId?: string) => {
-      let cohortCost = 0;
-      const schoolCounts: Record<string, { exclusive: number; nonExclusive: number }> = {};
-      sortedSchools.forEach((s) => {
-        schoolCounts[s.id] = { exclusive: 0, nonExclusive: 0 };
+    // Group assignedHouseholds by school and cohort
+    const schoolCohortCounts: Record<string, Record<string, number>> = {};
+    sortedSchools.forEach((s) => {
+      schoolCohortCounts[s.id] = { isolated: 0 };
+      centers.forEach((c) => {
+        schoolCohortCounts[s.id][c.id] = 0;
       });
-      
-      cohortHouseholds.forEach((h) => {
-        if (!h.assignedSchoolId) return;
-        
-        let isExclusive = false;
-        if (policy === 'catchment') {
-          const eligible = getEligibleSchoolsForPoint(h, sortedSchools);
-          if (eligible.length === 1) {
-            isExclusive = true;
-          }
-        }
-        
-        if (isExclusive) {
-          schoolCounts[h.assignedSchoolId].exclusive++;
-        } else {
-          schoolCounts[h.assignedSchoolId].nonExclusive++;
-        }
-      });
+    });
 
-      const distribution: { schoolId: string; count: number }[] = [];
+    assignedHouseholds.forEach((h) => {
+      if (!h.assignedSchoolId) return;
+      const cohortId = (h.type === 'village' && h.settlementId) ? h.settlementId : 'isolated';
+      if (schoolCohortCounts[h.assignedSchoolId]) {
+        schoolCohortCounts[h.assignedSchoolId][cohortId] = (schoolCohortCounts[h.assignedSchoolId][cohortId] || 0) + 1;
+      }
+    });
 
-      sortedSchools.forEach((s) => {
-        const { exclusive, nonExclusive } = schoolCounts[s.id];
-        const totalAssigned = exclusive + nonExclusive;
-        if (totalAssigned > 0) {
-          distribution.push({ schoolId: s.id, count: totalAssigned });
-        }
-        
-        cohortCost += exclusive * catchmentCostPerPupil;
-        
-        if (nonExclusive > 0) {
-          if (nonExclusive > 16) {
-            cohortCost += nonExclusive * 10.0;
-          } else {
-            cohortCost += nonExclusive * 25.0;
-          }
-        }
-      });
+    sortedSchools.forEach((s) => {
+      const cohortCounts = schoolCohortCounts[s.id] || {};
+      const totalStudents = Object.values(cohortCounts).reduce((a, b) => a + b, 0);
 
-      if (centerId && policy === 'nearest') {
-        const center = centers.find((c) => c.id === centerId);
-        const activeDestinations = distribution.filter((d) => d.count > 0);
-        
-        if (activeDestinations.length > 1) {
-          const sortedDests = [...activeDestinations].sort((a, b) => b.count - a.count);
-          const majorityDest = sortedDests[0];
-          const fragmentedCount = cohortHouseholds.length - majorityDest.count;
-          
-          splitsList.push({
-            centerId,
-            centerName: center ? center.name : `Village ${centerId}`,
-            totalStudents: cohortHouseholds.length,
-            fragmentedCount,
-            distribution,
-          });
-        }
+      if (totalStudents === 0) return;
+
+      // 1. Pack into Coaches (Global pooling)
+      let numCoaches = 0;
+      let rem = totalStudents;
+      if (totalStudents >= coachThreshold) {
+        numCoaches = Math.floor(totalStudents / coachCapacity);
+        rem = totalStudents - numCoaches * coachCapacity;
       }
 
-      return cohortCost;
-    };
+      // 2. Pack into Minibuses (Global pooling)
+      let numMinibuses = 0;
+      if (rem >= minibusThreshold) {
+        numMinibuses = Math.floor(rem / minibusCapacity);
+        let remPrime = rem % minibusCapacity;
+        if (remPrime >= minibusThreshold) {
+          numMinibuses += 1;
+          remPrime = 0;
+        }
+        rem = remPrime;
+      }
 
-    Object.keys(villageCohorts).forEach((centerId) => {
-      totalCost += calculateCohortCost(villageCohorts[centerId], centerId);
+      coachesCount += numCoaches;
+      minibusesCount += numMinibuses;
+      totalCost += numCoaches * coachCost + numMinibuses * minibusCost;
+
+      // 3. Pack residuals into localized point-to-point Taxis
+      const globalSeatsAvailable = totalStudents - rem;
+      let seatsRemaining = globalSeatsAvailable;
+
+      const sortedCohortIds = Object.keys(cohortCounts).sort();
+      sortedCohortIds.forEach((cohortId) => {
+        const count = cohortCounts[cohortId];
+        const assignedToGlobal = Math.min(count, seatsRemaining);
+        seatsRemaining -= assignedToGlobal;
+        const residual = count - assignedToGlobal;
+
+        if (residual > 0) {
+          const taxisNeeded = Math.ceil(residual / taxiCapacity);
+          taxisCount += taxisNeeded;
+          totalCost += taxisNeeded * taxiCost;
+        }
+      });
     });
-    totalCost += calculateCohortCost(isolatedCohort);
 
-    return { totalCost, splitsList };
+    return { totalCost, coachesCount, minibusesCount, taxisCount };
   };
 
-  const { totalCost: catchmentCost } = runCostCalculation('catchment');
-  const { totalCost: nearestCost, splitsList: splits } = runCostCalculation('nearest');
+  const catchmentReport = computeVehicleCost(assignedCatchment);
+  const nearestReport = computeVehicleCost(assignedNearest);
+
+  const catchmentCost = catchmentReport.totalCost;
+  const nearestCost = nearestReport.totalCost;
 
   const activeCost = activePolicy === 'catchment' ? catchmentCost : nearestCost;
   const deficit = activeCost - catchmentCost;
+
+  const activeCoaches = activePolicy === 'catchment' ? catchmentReport.coachesCount : nearestReport.coachesCount;
+  const activeMinibuses = activePolicy === 'catchment' ? catchmentReport.minibusesCount : nearestReport.minibusesCount;
+  const activeTaxis = activePolicy === 'catchment' ? catchmentReport.taxisCount : nearestReport.taxisCount;
+
+  // Splits list for nearest policy fragmentation audit
+  const splits: FinancialReport['splits'] = [];
+  const villageHouseholds: Record<string, Household[]> = {};
+  assignedNearest.forEach((h) => {
+    if (h.type === 'village' && h.settlementId) {
+      if (!villageHouseholds[h.settlementId]) {
+        villageHouseholds[h.settlementId] = [];
+      }
+      villageHouseholds[h.settlementId].push(h);
+    }
+  });
+
+  Object.keys(villageHouseholds).forEach((centerId) => {
+    const cohortHouseholds = villageHouseholds[centerId];
+    const counts: Record<string, number> = {};
+    sortedSchools.forEach((s) => {
+      counts[s.id] = 0;
+    });
+    cohortHouseholds.forEach((h) => {
+      if (h.assignedSchoolId) {
+        counts[h.assignedSchoolId] = (counts[h.assignedSchoolId] || 0) + 1;
+      }
+    });
+
+    const distribution = sortedSchools
+      .map((s) => ({ schoolId: s.id, count: counts[s.id] || 0 }))
+      .filter((d) => d.count > 0);
+
+    const center = centers.find((c) => c.id === centerId);
+    if (distribution.length > 1) {
+      const sortedDests = [...distribution].sort((a, b) => b.count - a.count);
+      const majorityDest = sortedDests[0];
+      const fragmentedCount = cohortHouseholds.length - majorityDest.count;
+      
+      splits.push({
+        centerId,
+        centerName: center ? center.name : `Village ${centerId}`,
+        totalStudents: cohortHouseholds.length,
+        fragmentedCount,
+        distribution,
+      });
+    }
+  });
 
   return {
     catchmentCost,
@@ -1204,6 +1258,9 @@ export function calculateFinancials(
     activeCost,
     deficit,
     splits,
+    activeCoaches,
+    activeMinibuses,
+    activeTaxis,
   };
 }
 

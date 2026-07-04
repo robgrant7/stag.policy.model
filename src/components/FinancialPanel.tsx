@@ -74,6 +74,30 @@ export const FinancialPanel: React.FC<FinancialPanelProps> = ({
         </div>
       </div>
 
+      {/* Active Vehicle Fleet Breakdown */}
+      <div className="space-y-2 pt-1 border-t border-slate-800/40">
+        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+          Active Fleet Breakdown
+        </h3>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-slate-950/45 border border-slate-850 p-2 text-center rounded-xl">
+            <span className="text-xs block">🎫</span>
+            <span className="block text-[8px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Coaches</span>
+            <span className="block text-xs font-extrabold text-indigo-400 mt-0.5">{financials.activeCoaches} active</span>
+          </div>
+          <div className="bg-slate-950/45 border border-slate-850 p-2 text-center rounded-xl">
+            <span className="text-xs block">🚐</span>
+            <span className="block text-[8px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Minibuses</span>
+            <span className="block text-xs font-extrabold text-emerald-450 mt-0.5">{financials.activeMinibuses} active</span>
+          </div>
+          <div className="bg-slate-950/45 border border-slate-850 p-2 text-center rounded-xl">
+            <span className="text-xs block">🚕</span>
+            <span className="block text-[8px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Local Taxis</span>
+            <span className="block text-xs font-extrabold text-rose-400 mt-0.5">{financials.activeTaxis} active</span>
+          </div>
+        </div>
+      </div>
+
       {/* Deficit Alert Box */}
       {isNearest && hasDeficit && (
         <div className="bg-rose-500/10 border border-rose-500/20 text-rose-250 rounded-xl p-3.5 flex items-start gap-2.5 animate-fadeIn">
@@ -85,7 +109,7 @@ export const FinancialPanel: React.FC<FinancialPanelProps> = ({
               Policy Cost Deficit: +£{financials.deficit}/day budget penalty
             </p>
             <p className="text-slate-400 text-[10px]">
-              Nearest routing fragments pupil destinations, forcing high-cost minibus/taxi contracts (£25/day rate) for groups of 16 or fewer.
+              Nearest routing fragments pupil cohorts across boundary lines. These small residual fragments fall below minibus pooling thresholds, forcing high-cost localized taxi routes.
             </p>
           </div>
         </div>
@@ -109,7 +133,7 @@ export const FinancialPanel: React.FC<FinancialPanelProps> = ({
                       ⚠ {s.fragmentedCount} students split onto high-cost alternative routes
                     </p>
                   </div>
-                  <div className="text-right text-[9px] text-slate-500 space-y-0.5">
+                  <div className="text-right text-[9px] text-slate-555 space-y-0.5">
                     {s.distribution.map((d) => (
                       <div key={d.schoolId}>
                         School {d.schoolId.replace('school-', '').toUpperCase()}: {d.count}

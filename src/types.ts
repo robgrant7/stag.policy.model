@@ -40,4 +40,12 @@ export interface ScenarioParams {
   isolatedCount: number;   // default 10
   isolatedPercentage?: number; // default 15%
   clusterRadius: number;   // default 8
+  coachCapacity?: number;
+  coachThreshold?: number;
+  coachCost?: number;
+  minibusCapacity?: number;
+  minibusThreshold?: number;
+  minibusCost?: number;
+  taxiCapacity?: number;
+  taxiCost?: number;
 }
