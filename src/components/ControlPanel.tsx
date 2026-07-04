@@ -669,22 +669,20 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 Run randomized simulations in the background. Each run generates a unique geography (1-12 settlements, 1-6 schools, custom overlap, topology parameters, and school pull weight) to compare Catchment vs. Nearest School fleet costs.
               </p>
 
-              {/* Number of Runs Dropdown */}
+              {/* Number of Runs Input Box */}
               <div className="space-y-1.5">
                 <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider">
                   Number of Simulation Runs
                 </label>
-                <select
+                <input
+                  type="number"
                   id="bulk-runs-count"
+                  min="1"
+                  max="10000"
                   defaultValue="50"
-                  className="w-full bg-slate-950 text-slate-200 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
-                >
-                  <option value="10">10 Runs</option>
-                  <option value="50">50 Runs</option>
-                  <option value="100">100 Runs</option>
-                  <option value="250">250 Runs</option>
-                  <option value="500">500 Runs</option>
-                </select>
+                  className="w-full bg-slate-950 text-slate-200 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                  placeholder="e.g. 100"
+                />
               </div>
 
               {/* Progress indicator */}
@@ -708,8 +706,9 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 type="button"
                 disabled={isBulking}
                 onClick={() => {
-                  const selectEl = document.getElementById('bulk-runs-count') as HTMLSelectElement;
-                  const count = selectEl ? parseInt(selectEl.value) : 50;
+                  const inputEl = document.getElementById('bulk-runs-count') as HTMLInputElement;
+                  let count = inputEl ? parseInt(inputEl.value) : 50;
+                  if (isNaN(count) || count < 1) count = 1;
                   onRunBulk(count);
                 }}
                 className={`w-full py-2 px-4 rounded-xl text-xs font-bold transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer ${
