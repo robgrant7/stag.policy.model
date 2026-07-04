@@ -903,13 +903,23 @@ export function generateScenario(params: ScenarioParams): {
 
   // Snapping function to lock borders to canvas edges and prevent dead zones
   function snapToPerimeter(poly: Point[]): Point[] {
+    if (poly.length === 0) return [];
+    
+    let minX = 100, maxX = 0, minY = 100, maxY = 0;
+    poly.forEach((p) => {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    });
+
     return poly.map((p) => {
       let x = p.x;
       let y = p.y;
-      if (x <= 10) x = 0;
-      else if (x >= 90) x = 100;
-      if (y <= 10) y = 0;
-      else if (y >= 90) y = 100;
+      if (minX <= 15.0 && x <= 15.0) x = 0;
+      if (maxX >= 85.0 && x >= 85.0) x = 100;
+      if (minY <= 15.0 && y <= 15.0) y = 0;
+      if (maxY >= 85.0 && y >= 85.0) y = 100;
       return { x, y };
     });
   }
