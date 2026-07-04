@@ -373,7 +373,8 @@ export function assignHouseholds(
   overlapRule: 'community' | 'legacy_slider' = 'community',
   legacySplitInput: number | { a: number; b: number; c: number } = { a: 40, b: 30, c: 30 },
   centers: SettlementCenter[] = [],
-  attractiveness: Record<string, number> = {}
+  attractiveness: Record<string, number> = {},
+  repositionUncovered: boolean = true
 ): Household[] {
   // Normalize legacySplit input
   let legacySplit = { a: 40, b: 30, c: 30 };
@@ -409,7 +410,82 @@ export function assignHouseholds(
 
     // policy === 'catchment'
     // Determine which school polygons contain the student point
-    const eligible = getEligibleSchoolsForPoint(h, sortedSchools);
+    let eligible = getEligibleSchoolsForPoint(h, sortedSchools);
+    let updatedX = h.x;
+    let updatedY = h.y;
+
+    if (eligible.length === 0 && repositionUncovered) {
+      // Reposition uncovered household into a catchment
+      let found = false;
+
+      if (h.type === 'village' && h.settlementId) {
+        const center = centers.find((c) => c.id === h.settlementId);
+        if (center) {
+          const rad = center.dispersionRadius;
+          const angleRad = (center.roadAngle * Math.PI) / 180;
+          
+          for (let attempt = 0; attempt < 100; attempt++) {
+            let testX = center.x;
+            let testY = center.y;
+
+            if (center.archetype === 'linear') {
+              const t = (Math.random() - 0.5) * 2 * rad;
+              const d = (Math.random() - 0.5) * 3.0;
+              testX += t * Math.cos(angleRad) - d * Math.sin(angleRad);
+              testY += t * Math.sin(angleRad) + d * Math.cos(angleRad);
+            } else {
+              const theta = Math.random() * 2 * Math.PI;
+              const r = Math.sqrt(Math.random()) * rad;
+              testX += r * Math.cos(theta);
+              testY += r * Math.sin(theta);
+            }
+
+            testX = Math.max(0, Math.min(100, testX));
+            testY = Math.max(0, Math.min(100, testY));
+            
+            const testPt = { x: Math.round(testX * 10) / 10, y: Math.round(testY * 10) / 10 };
+            if (sortedSchools.some((school) => isPointInSchoolCatchment(testPt, school))) {
+              updatedX = testPt.x;
+              updatedY = testPt.y;
+              found = true;
+              break;
+            }
+          }
+
+          if (!found) {
+            updatedX = Math.round(center.x * 10) / 10;
+            updatedY = Math.round(center.y * 10) / 10;
+          }
+        }
+      } else {
+        // isolated household (outlier)
+        for (let attempt = 0; attempt < 100; attempt++) {
+          const testX = Math.round((Math.random() * 100) * 10) / 10;
+          const testY = Math.round((Math.random() * 100) * 10) / 10;
+          const testPt = { x: testX, y: testY };
+          if (sortedSchools.some((school) => isPointInSchoolCatchment(testPt, school))) {
+            updatedX = testX;
+            updatedY = testY;
+            found = true;
+            break;
+          }
+        }
+
+        if (!found && sortedSchools.length > 0) {
+          updatedX = Math.round(sortedSchools[0].x * 10) / 10;
+          updatedY = Math.round(sortedSchools[0].y * 10) / 10;
+        }
+      }
+
+      // Re-calculate eligibility after repositioning
+      eligible = getEligibleSchoolsForPoint({ x: updatedX, y: updatedY }, sortedSchools);
+    }
+
+    const currentH = {
+      ...h,
+      x: updatedX,
+      y: updatedY,
+    };
 
     let assignedSchoolId: string;
 
@@ -422,8 +498,8 @@ export function assignHouseholds(
     } else {
       // Overlap Zone (shared by 2 or more schools)
       if (overlapRule === 'community') {
-        if (h.type === 'village' && h.settlementId) {
-          const center = centers.find((c) => c.id === h.settlementId);
+        if (currentH.type === 'village' && currentH.settlementId) {
+          const center = centers.find((c) => c.id === currentH.settlementId);
           if (center) {
             // Find eligible schools for the village center point
             const centerEligible = getEligibleSchoolsForPoint(center, sortedSchools);
@@ -458,7 +534,7 @@ export function assignHouseholds(
           // isolated student: check utility at student coordinate
           const utilities = eligible.map((schoolId) => {
             const s = sortedSchools.find((sch) => sch.id === schoolId)!;
-            const dist = getDistance(h.x, h.y, s.x, s.y);
+            const dist = getDistance(currentH.x, currentH.y, s.x, s.y);
             const distTerm = dist > 0.1 ? 1.0 / dist : 10.0;
             const attr = attractiveness[schoolId] ?? 0.0;
             const utility = distTerm * (1.0 + attr);
@@ -470,13 +546,13 @@ export function assignHouseholds(
       } else {
         // legacy_slider
         if (sortedSchools.length === 2) {
-          const score = getDeterministicScore(h.id);
+          const score = getDeterministicScore(currentH.id);
           assignedSchoolId = score < legacySplit.a ? sortedSchools[0].id : sortedSchools[1].id;
         } else {
           // Attractiveness utility-based split
           const utilities = eligible.map((schoolId) => {
             const school = sortedSchools.find((sch) => sch.id === schoolId)!;
-            const dist = getDistance(h.x, h.y, school.x, school.y);
+            const dist = getDistance(currentH.x, currentH.y, school.x, school.y);
             const distTerm = dist > 0.1 ? 1.0 / dist : 10.0;
             const attr = attractiveness[schoolId] ?? 0.0;
             const utility = distTerm * (1.0 + attr);
@@ -486,7 +562,7 @@ export function assignHouseholds(
           const sumUtility = utilities.reduce((sum, u) => sum + u.utility, 0);
           
           if (sumUtility > 0) {
-            const score = getDeterministicScore(h.id);
+            const score = getDeterministicScore(currentH.id);
             let accum = 0;
             let assignedId = eligible[0];
             
@@ -507,7 +583,7 @@ export function assignHouseholds(
     }
 
     return {
-      ...h,
+      ...currentH,
       assignedSchoolId: assignedSchoolId as any,
     };
   });
