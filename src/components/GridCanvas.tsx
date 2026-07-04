@@ -126,7 +126,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
       <div className="bg-slate-950/60 border border-slate-800 rounded-lg p-3 min-h-[50px] mb-4 text-xs text-slate-350 backdrop-blur-md shadow-lg flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="text-[10px] text-indigo-400 font-bold tracking-wide uppercase border-r border-slate-800 pr-3">
-            Map Inspector
+            Map Inspector (V2.1 - Repositioning Active)
           </div>
           {hoveredPoint ? (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
