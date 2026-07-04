@@ -31,6 +31,9 @@ function App() {
     'school-e': 0.0,
     'school-f': 0.0,
   });
+  
+  // Cost Per Pupil State
+  const [catchmentCostPerPupil, setCatchmentCostPerPupil] = useState<number>(4.50);
 
   // 3. Scenario Data State
   const [households, setHouseholds] = useState<Household[]>([]);
@@ -39,8 +42,8 @@ function App() {
 
   // 3.5. Reactive Transport Operational Cost calculations
   const financials = useMemo(() => {
-    return calculateFinancials(households, centers, transportPolicy, schools);
-  }, [households, centers, transportPolicy, schools]);
+    return calculateFinancials(households, centers, transportPolicy, schools, catchmentCostPerPupil);
+  }, [households, centers, transportPolicy, schools, catchmentCostPerPupil]);
 
   // 4. Scenario generator trigger
   const handleGenerate = (
@@ -167,7 +170,7 @@ function App() {
         metadata: {
           generatedAt: new Date().toISOString(),
           activePolicy: transportPolicy,
-          parameters: params,
+          parameters: { ...params, catchmentCostPerPupil },
           summary: {
             totalHouseholds: households.length,
             villageHouseholds: households.filter(h => h.type === 'village').length,
@@ -241,6 +244,8 @@ function App() {
           centers={centers}
           onUpdateVillage={handleUpdateVillage}
           onResetVillages={handleResetVillages}
+          catchmentCostPerPupil={catchmentCostPerPupil}
+          onCatchmentCostChange={setCatchmentCostPerPupil}
         />
 
         <FinancialPanel

@@ -265,7 +265,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                       key={`poly-${school.id}-${pIdx}`}
                       points={pointsStr}
                       fill={school.color}
-                      fillOpacity={0.12}
+                      fillOpacity={0.15}
                       stroke={school.color}
                       strokeWidth="0.75"
                       className="transition-all duration-300"
@@ -276,9 +276,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
 
               {/* 2. Interactive Selection Route Lines (Narrow Muted Links) */}
               {(() => {
-                const activeSchoolId = (hoveredPoint && 'polygon' in hoveredPoint)
-                  ? hoveredPoint.id
-                  : (filterType.startsWith('school-') ? filterType : null);
+                const activeSchoolId = filterType.startsWith('school-') ? filterType : null;
 
                 if (!activeSchoolId) return null;
                 const activeSchool = schools.find((s) => s.id === activeSchoolId);

@@ -1093,32 +1093,16 @@ export function calculateFinancials(
   households: Household[],
   centers: SettlementCenter[],
   activePolicy: TransportPolicy,
-  schools: School[] = []
+  schools: School[] = [],
+  catchmentCostPerPupil: number = 4.50
 ): FinancialReport {
-  const totalStudents = households.length;
-  const catchmentCost = totalStudents * 10;
+  const sortedSchools = [...schools].sort((a, b) => a.x - b.x);
 
-  // 1. Group households by cohort (Nearest assignments are used to calculate the nearestCost/splits comparison)
+  // Group households by cohort
   const villageCohorts: Record<string, Household[]> = {};
   const isolatedCohort: Household[] = [];
-
-  const targetHouseholds = activePolicy === 'nearest'
-    ? households
-    : households.map((h) => {
-        if (schools.length === 0) return h;
-        const sortedSchools = [...schools].sort((a, b) => a.x - b.x);
-        const distances = sortedSchools.map((s) => ({
-          id: s.id,
-          distance: getDistance(h.x, h.y, s.x, s.y),
-        }));
-        distances.sort((a, b) => a.distance - b.distance);
-        return {
-          ...h,
-          assignedSchoolId: distances[0].id as any,
-        };
-      });
-
-  targetHouseholds.forEach((h) => {
+  
+  households.forEach((h) => {
     if (h.type === 'village' && h.settlementId) {
       if (!villageCohorts[h.settlementId]) {
         villageCohorts[h.settlementId] = [];
@@ -1129,76 +1113,90 @@ export function calculateFinancials(
     }
   });
 
-  let nearestCost = 0;
-  const splits: FinancialReport['splits'] = [];
+  const runCostCalculation = (policy: TransportPolicy) => {
+    let totalCost = 0;
+    const splitsList: FinancialReport['splits'] = [];
 
-  // 2. Helper to calculate cost for a cohort
-  const calculateCohortCost = (cohortHouseholds: Household[], centerId?: string) => {
-    const counts: Record<string, number> = {};
-    if (schools.length > 0) {
-      schools.forEach((s) => {
-        counts[s.id] = 0;
+    const calculateCohortCost = (cohortHouseholds: Household[], centerId?: string) => {
+      let cohortCost = 0;
+      const schoolCounts: Record<string, { exclusive: number; nonExclusive: number }> = {};
+      sortedSchools.forEach((s) => {
+        schoolCounts[s.id] = { exclusive: 0, nonExclusive: 0 };
       });
-    } else {
-      counts['school-a'] = 0;
-      counts['school-b'] = 0;
-      counts['school-c'] = 0;
-    }
-
-    cohortHouseholds.forEach((h) => {
-      if (h.assignedSchoolId) {
-        counts[h.assignedSchoolId] = (counts[h.assignedSchoolId] || 0) + 1;
-      }
-    });
-
-    let cohortCost = 0;
-    const distribution: { schoolId: string; count: number }[] = [];
-
-    Object.keys(counts).forEach((schoolId) => {
-      const headcount = counts[schoolId];
-      if (headcount > 0) {
-        distribution.push({ schoolId, count: headcount });
-        if (headcount > 16) {
-          cohortCost += headcount * 10;
+      
+      cohortHouseholds.forEach((h) => {
+        if (!h.assignedSchoolId) return;
+        
+        let isExclusive = false;
+        if (policy === 'catchment') {
+          const eligible = getEligibleSchoolsForPoint(h, sortedSchools);
+          if (eligible.length === 1) {
+            isExclusive = true;
+          }
+        }
+        
+        if (isExclusive) {
+          schoolCounts[h.assignedSchoolId].exclusive++;
         } else {
-          cohortCost += headcount * 25;
+          schoolCounts[h.assignedSchoolId].nonExclusive++;
+        }
+      });
+
+      const distribution: { schoolId: string; count: number }[] = [];
+
+      sortedSchools.forEach((s) => {
+        const { exclusive, nonExclusive } = schoolCounts[s.id];
+        const totalAssigned = exclusive + nonExclusive;
+        if (totalAssigned > 0) {
+          distribution.push({ schoolId: s.id, count: totalAssigned });
+        }
+        
+        cohortCost += exclusive * catchmentCostPerPupil;
+        
+        if (nonExclusive > 0) {
+          if (nonExclusive > 16) {
+            cohortCost += nonExclusive * 10.0;
+          } else {
+            cohortCost += nonExclusive * 25.0;
+          }
+        }
+      });
+
+      if (centerId && policy === 'nearest') {
+        const center = centers.find((c) => c.id === centerId);
+        const activeDestinations = distribution.filter((d) => d.count > 0);
+        
+        if (activeDestinations.length > 1) {
+          const sortedDests = [...activeDestinations].sort((a, b) => b.count - a.count);
+          const majorityDest = sortedDests[0];
+          const fragmentedCount = cohortHouseholds.length - majorityDest.count;
+          
+          splitsList.push({
+            centerId,
+            centerName: center ? center.name : `Village ${centerId}`,
+            totalStudents: cohortHouseholds.length,
+            fragmentedCount,
+            distribution,
+          });
         }
       }
+
+      return cohortCost;
+    };
+
+    Object.keys(villageCohorts).forEach((centerId) => {
+      totalCost += calculateCohortCost(villageCohorts[centerId], centerId);
     });
+    totalCost += calculateCohortCost(isolatedCohort);
 
-    // Check splits for village cohorts
-    if (centerId) {
-      const center = centers.find((c) => c.id === centerId);
-      const activeDestinations = distribution.filter((d) => d.count > 0);
-      
-      if (activeDestinations.length > 1) {
-        const sortedDests = [...activeDestinations].sort((a, b) => b.count - a.count);
-        const majorityDest = sortedDests[0];
-        const fragmentedCount = cohortHouseholds.length - majorityDest.count;
-        
-        splits.push({
-          centerId,
-          centerName: center ? center.name : `Village ${centerId}`,
-          totalStudents: cohortHouseholds.length,
-          fragmentedCount,
-          distribution,
-        });
-      }
-    }
-
-    return cohortCost;
+    return { totalCost, splitsList };
   };
 
-  // Calculate village cohort costs
-  Object.keys(villageCohorts).forEach((centerId) => {
-    nearestCost += calculateCohortCost(villageCohorts[centerId], centerId);
-  });
-
-  // Calculate isolated cohort cost
-  nearestCost += calculateCohortCost(isolatedCohort);
+  const { totalCost: catchmentCost } = runCostCalculation('catchment');
+  const { totalCost: nearestCost, splitsList: splits } = runCostCalculation('nearest');
 
   const activeCost = activePolicy === 'catchment' ? catchmentCost : nearestCost;
-  const deficit = nearestCost - catchmentCost;
+  const deficit = activeCost - catchmentCost;
 
   return {
     catchmentCost,
