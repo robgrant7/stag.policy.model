@@ -529,12 +529,12 @@ function App() {
                     </ul>
                   </li>
                   <li>
-                    <strong>Hiring the Transport Fleet</strong>: The model groups students in each village zone heading to the same school, and hires vehicles to fit them:
+                    <strong>Hiring the Transport Fleet</strong>: The model pools all students assigned to the same school to determine Coach and Minibus sizes. Any remaining students are assigned to Taxis grouped by village:
                     <ul className="list-disc list-inside space-y-1 pl-4 mt-1">
-                      <li>If student count is at least the <strong>Coach Threshold</strong>, it hires a Coach (up to 50 capacity, costing £500/day).</li>
-                      <li>If student count is at least the <strong>Minibus Threshold</strong>, it hires a Minibus (up to 16 capacity, costing £250/day).</li>
-                      <li>Otherwise, it hires <strong>Taxis</strong> (up to 2 capacity, costing £150/day) to carry the remaining students.</li>
-                      <li>Isolated outliers cannot walk to group bus stops, so they always travel in individual Taxis.</li>
+                      <li>If the student count meets the <strong>Coach Threshold</strong>, it hires a Coach (up to capacity, default 50, costing daily rate, default £500/day).</li>
+                      <li>If the student count meets the <strong>Minibus Threshold</strong>, it hires a Minibus (up to capacity, default 16, costing daily rate, default £250/day).</li>
+                      <li>Otherwise, it hires <strong>Taxis</strong> (up to capacity, default 2, costing daily rate, default £150/day) to carry the remaining students.</li>
+                      <li>Isolated outliers cannot walk to group bus stops, so they always travel in Taxis.</li>
                     </ul>
                   </li>
                   <li>
@@ -554,8 +554,8 @@ function App() {
                     <span className="block text-xs text-slate-500 italic mt-0.5">Truth: Real costs are likely higher than shown here.</span>
                   </li>
                   <li>
-                    <strong>No Shared Multi-Village Routes</strong>: Buses do not pick up students from multiple separate villages. 
-                    <span className="block text-xs text-slate-500 italic mt-0.5">Truth: Consolidating routes might reduce some costs, but sparse rural geography makes this highly difficult in practice.</span>
+                    <strong>Shared Multi-Village Routes</strong>: The model assumes coaches and minibuses pool all students assigned to a school globally and can pick up children from multiple separate villages on a single run.
+                    <span className="block text-xs text-slate-500 italic mt-0.5">Truth: In practice, winding rural roads and long travel times make routing buses across multiple villages difficult, meaning actual operations would require more individual runs.</span>
                   </li>
                   <li>
                     <strong>Perfect Contract Consolidation</strong>: The model assumes the council instantly replaces taxis with minibuses or coaches when thresholds are met.
