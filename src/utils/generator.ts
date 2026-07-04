@@ -982,12 +982,15 @@ export function generateScenario(params: ScenarioParams): {
   // Run the strict catchment inclusion fail-safe
   ensureSettlementInclusion(schools, centers);
 
+  // Reposition any uncovered households into the catchments
+  const cleanHouseholds = repositionUncoveredHouseholds(households, schools, centers);
+
   schools.forEach((school) => {
     console.log(`[CLIENT-SIDE] School ${school.id} (${school.name}) polygons:`, JSON.stringify(school.polygons));
   });
 
   return {
-    households,
+    households: cleanHouseholds,
     centers,
     schools,
   };
@@ -1130,6 +1133,99 @@ export function calculateFinancials(
   };
 }
 
+export function repositionUncoveredHouseholds(
+  households: Household[],
+  schools: School[],
+  centers: SettlementCenter[]
+): Household[] {
+  return households.map((h) => {
+    const isInside = schools.some((school) => isPointInSchoolCatchment(h, school));
+    if (isInside) {
+      return h;
+    }
+
+    if (h.type === 'village' && h.settlementId) {
+      const center = centers.find((c) => c.id === h.settlementId);
+      if (center) {
+        const rad = center.dispersionRadius;
+        const angleRad = (center.roadAngle * Math.PI) / 180;
+        
+        let newX = h.x;
+        let newY = h.y;
+        let found = false;
+
+        for (let attempt = 0; attempt < 100; attempt++) {
+          let testX = center.x;
+          let testY = center.y;
+
+          if (center.archetype === 'linear') {
+            const t = (Math.random() - 0.5) * 2 * rad;
+            const d = (Math.random() - 0.5) * 3.0;
+            testX += t * Math.cos(angleRad) - d * Math.sin(angleRad);
+            testY += t * Math.sin(angleRad) + d * Math.cos(angleRad);
+          } else {
+            const theta = Math.random() * 2 * Math.PI;
+            const r = Math.sqrt(Math.random()) * rad;
+            testX += r * Math.cos(theta);
+            testY += r * Math.sin(theta);
+          }
+
+          testX = Math.max(0, Math.min(100, testX));
+          testY = Math.max(0, Math.min(100, testY));
+          
+          const testPt = { x: Math.round(testX * 10) / 10, y: Math.round(testY * 10) / 10 };
+          if (schools.some((school) => isPointInSchoolCatchment(testPt, school))) {
+            newX = testPt.x;
+            newY = testPt.y;
+            found = true;
+            break;
+          }
+        }
+
+        if (!found) {
+          newX = Math.round(center.x * 10) / 10;
+          newY = Math.round(center.y * 10) / 10;
+        }
+
+        return {
+          ...h,
+          x: newX,
+          y: newY,
+        };
+      }
+    } else {
+      let newX = h.x;
+      let newY = h.y;
+      let found = false;
+
+      for (let attempt = 0; attempt < 100; attempt++) {
+        const testX = Math.round((Math.random() * 100) * 10) / 10;
+        const testY = Math.round((Math.random() * 100) * 10) / 10;
+        const testPt = { x: testX, y: testY };
+        if (schools.some((school) => isPointInSchoolCatchment(testPt, school))) {
+          newX = testX;
+          newY = testY;
+          found = true;
+          break;
+        }
+      }
+
+      if (!found && schools.length > 0) {
+        newX = Math.round(schools[0].x * 10) / 10;
+        newY = Math.round(schools[0].y * 10) / 10;
+      }
+
+      return {
+        ...h,
+        x: newX,
+        y: newY,
+      };
+    }
+
+    return h;
+  });
+}
+
 export function regenerateHouseholdsForCenters(
   centers: SettlementCenter[],
   villageCount: number,
@@ -1219,5 +1315,5 @@ export function regenerateHouseholdsForCenters(
     });
   }
 
-  return households;
+  return repositionUncoveredHouseholds(households, _schools, centers);
 }
