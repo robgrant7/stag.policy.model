@@ -829,140 +829,144 @@ export function generateScenario(params: ScenarioParams): {
     });
   }
 
-  // 4. Generate dynamic school catchment polygons satisfying arbitrary administrative zoning (decoupled from physical distance)
-  const schoolAssignments: Record<string, string> = {};
-  
-  // First, assign each village center containing a school to that school
-  centers.forEach((center) => {
-    const matchingSchool = schools.find((s) => Math.abs(s.x - center.x) < 0.1 && Math.abs(s.y - center.y) < 0.1);
-    if (matchingSchool) {
-      schoolAssignments[center.id] = matchingSchool.id;
-    }
-  });
+  // 4. Generate dynamic school catchment polygons satisfying administrative Y-sorted zoning (decoupled from physical distance)
+  // Let's sort schools horizontally to identify left-to-right ordering
+  const sortedSchools = [...schools].sort((a, b) => a.x - b.x);
 
-  // Assign the remaining villages arbitrarily (e.g. based on index)
-  centers.forEach((center, idx) => {
-    if (schoolAssignments[center.id]) return;
-    const schoolIdx = idx % schools.length;
-    schoolAssignments[center.id] = schools[schoolIdx].id;
-  });
-
-  // Calculate and assign expanded Voronoi cells for each school
-  schools.forEach((school) => {
-    const assignedCenters = centers.filter((c) => schoolAssignments[c.id] === school.id);
+  // Helper to generate organic curves with randomized pocket sways
+  function generateOrganicCurve(xMid: number, shift: number, swaySign: number): Point[] {
+    const points: Point[] = [];
+    const steps = 20;
+    const offset1 = Math.sin(xMid * 0.15) * 8.0;
+    const offset2 = Math.cos(xMid * 0.15) * -8.0;
     
-    const baseCells = assignedCenters.map((center) => {
-      return getVoronoiCellForCenter(center, centers);
-    });
-
-    if (baseCells.length > 0) {
-      // Step 2: Merge the Voronoi cells of the settlements assigned to the school
-      const baseMerged = mergePolygons(baseCells);
+    const p0 = { x: xMid, y: 100 };
+    const p1 = { x: xMid + offset1, y: 66 };
+    const p2 = { x: xMid + offset2, y: 33 };
+    const p3 = { x: xMid, y: 0 };
+    
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const oneMinusT = 1 - t;
+      const baseX = oneMinusT ** 3 * p0.x + 3 * oneMinusT ** 2 * t * p1.x + 3 * oneMinusT * t ** 2 * p2.x + t ** 3 * p3.x;
+      const baseY = oneMinusT ** 3 * p0.y + 3 * oneMinusT ** 2 * t * p1.y + 3 * oneMinusT * t ** 2 * p2.y + t ** 3 * p3.y;
       
-      // Step 3: Expand the boundaries of the combined polygon outward from the school center by non-uniform segment-based variation
-      const sx = school.x;
-      const sy = school.y;
+      // Organic segment variation for non-uniform overlap pocket width sways
+      const varShift = shift + Math.sin(i * 0.4) * 3.0 + (Math.sin(i * 0.9) * 1.5);
+      const x = baseX + swaySign * varShift;
       
-      const rawFactors = baseMerged.map(() => 1.05 + Math.random() * 0.20);
-      const smoothFactors = baseMerged.map((_, idx) => {
-        const prev = rawFactors[(idx - 1 + baseMerged.length) % baseMerged.length];
-        const curr = rawFactors[idx];
-        const next = rawFactors[(idx + 1) % baseMerged.length];
-        return (prev + curr + next) / 3;
+      points.push({
+        x: Math.max(0, Math.min(100, Math.round(x * 10) / 10)),
+        y: Math.max(0, Math.min(100, Math.round(baseY * 10) / 10)),
       });
-
-      const expandedPolygon = baseMerged.map((vertex, idx) => {
-        const factor = smoothFactors[idx];
-        const dx = vertex.x - sx;
-        const dy = vertex.y - sy;
-        const newX = sx + dx * factor;
-        const newY = sy + dy * factor;
-        return {
-          x: Math.max(0, Math.min(100, Math.round(newX * 10) / 10)),
-          y: Math.max(0, Math.min(100, Math.round(newY * 10) / 10)),
-        };
-      });
-
-      // Clip the expanded polygon against rival schools' perpendicular bisector half-planes
-      // to ensure a rival school's pin never falls inside this school's catchment.
-      let clippedPolygon = expandedPolygon;
-      schools.forEach((rival) => {
-        if (rival.id === school.id) return;
-        const mid = {
-          x: (school.x + rival.x) / 2,
-          y: (school.y + rival.y) / 2,
-        };
-        const normal = {
-          x: school.x - rival.x,
-          y: school.y - rival.y,
-        };
-        const len = Math.sqrt(normal.x * normal.x + normal.y * normal.y);
-        if (len > 0.01) {
-          normal.x /= len;
-          normal.y /= len;
-        }
-        clippedPolygon = clipPolygon(clippedPolygon, mid, normal);
-      });
-
-      // Snapping to the perimeter of the canvas to eliminate flank/corner dead zones
-      const snappedPolygon = clippedPolygon.map((p) => {
-        let x = p.x;
-        let y = p.y;
-        if (x <= 10) x = 0;
-        else if (x >= 90) x = 100;
-        if (y <= 10) y = 0;
-        else if (y >= 90) y = 100;
-        return { x, y };
-      });
-
-      school.polygon = snappedPolygon;
-      school.polygons = [snappedPolygon];
-    } else {
-      // Fallback: simple snapped polygon around the school center if no centers are assigned
-      const rad = 25.0;
-      const poly: Point[] = [];
-      const steps = 8;
-      for (let i = 0; i < steps; i++) {
-        const angle = (i * 2 * Math.PI) / steps;
-        poly.push({
-          x: Math.max(0, Math.min(100, Math.round((school.x + rad * Math.cos(angle)) * 10) / 10)),
-          y: Math.max(0, Math.min(100, Math.round((school.y + rad * Math.sin(angle)) * 10) / 10)),
-        });
-      }
-      
-      let clippedPoly = poly;
-      schools.forEach((rival) => {
-        if (rival.id === school.id) return;
-        const mid = {
-          x: (school.x + rival.x) / 2,
-          y: (school.y + rival.y) / 2,
-        };
-        const normal = {
-          x: school.x - rival.x,
-          y: school.y - rival.y,
-        };
-        const len = Math.sqrt(normal.x * normal.x + normal.y * normal.y);
-        if (len > 0.01) {
-          normal.x /= len;
-          normal.y /= len;
-        }
-        clippedPoly = clipPolygon(clippedPoly, mid, normal);
-      });
-      
-      const snappedPoly = clippedPoly.map((p) => {
-        let x = p.x;
-        let y = p.y;
-        if (x <= 10) x = 0;
-        else if (x >= 90) x = 100;
-        if (y <= 10) y = 0;
-        else if (y >= 90) y = 100;
-        return { x, y };
-      });
-      
-      school.polygon = snappedPoly;
-      school.polygons = [snappedPoly];
     }
-    school.pathD = undefined; // clear pathD since we render polygon elements directly
+    return points;
+  }
+
+  // Snapping function to lock borders to canvas edges and prevent dead zones
+  function snapToPerimeter(poly: Point[]): Point[] {
+    return poly.map((p) => {
+      let x = p.x;
+      let y = p.y;
+      if (x <= 10) x = 0;
+      else if (x >= 90) x = 100;
+      if (y <= 10) y = 0;
+      else if (y >= 90) y = 100;
+      return { x, y };
+    });
+  }
+
+  // Build catchments based on horizontal school slots
+  if (schoolCount === 1) {
+    const s = sortedSchools[0];
+    const poly = [
+      { x: 0, y: 100 },
+      { x: 100, y: 100 },
+      { x: 100, y: 0 },
+      { x: 0, y: 0 }
+    ];
+    s.polygon = snapToPerimeter(poly);
+    s.polygons = [s.polygon];
+  } else if (schoolCount === 2) {
+    const xMid = (sortedSchools[0].x + sortedSchools[1].x) / 2;
+    
+    const curve_R = generateOrganicCurve(xMid, 12.0, 1);
+    const curve_L = generateOrganicCurve(xMid, 12.0, -1);
+
+    const polyA = [
+      { x: 0, y: 100 },
+      ...curve_R,
+      { x: 0, y: 0 }
+    ];
+    const polyB = [
+      ...[...curve_L].reverse(),
+      { x: 100, y: 100 },
+      { x: 100, y: 0 }
+    ];
+
+    sortedSchools[0].polygon = snapToPerimeter(polyA);
+    sortedSchools[0].polygons = [sortedSchools[0].polygon];
+    
+    sortedSchools[1].polygon = snapToPerimeter(polyB);
+    sortedSchools[1].polygons = [sortedSchools[1].polygon];
+  } else if (schoolCount === 3) {
+    const xMid12 = (sortedSchools[0].x + sortedSchools[1].x) / 2;
+    const xMid23 = (sortedSchools[1].x + sortedSchools[2].x) / 2;
+
+    const curve_R12 = generateOrganicCurve(xMid12, 12.0, 1);
+    const curve_L12 = generateOrganicCurve(xMid12, 12.0, -1);
+    const curve_R23 = generateOrganicCurve(xMid23, 12.0, 1);
+    const curve_L23 = generateOrganicCurve(xMid23, 12.0, -1);
+
+    const polyA = [
+      { x: 0, y: 100 },
+      ...curve_R12,
+      { x: 0, y: 0 }
+    ];
+    const polyB = [
+      ...[...curve_L12].reverse(),
+      ...curve_R23
+    ];
+    const polyC = [
+      ...[...curve_L23].reverse(),
+      { x: 100, y: 100 },
+      { x: 100, y: 0 }
+    ];
+
+    sortedSchools[0].polygon = snapToPerimeter(polyA);
+    sortedSchools[0].polygons = [sortedSchools[0].polygon];
+
+    sortedSchools[1].polygon = snapToPerimeter(polyB);
+    sortedSchools[1].polygons = [sortedSchools[1].polygon];
+
+    sortedSchools[2].polygon = snapToPerimeter(polyC);
+    sortedSchools[2].polygons = [sortedSchools[2].polygon];
+  }
+
+  // Ensure that no school's coordinate pin falls inside a rival school's territory
+  schools.forEach((school) => {
+    schools.forEach((rival) => {
+      if (rival.id === school.id) return;
+      
+      // If rival pin falls inside school's polygon, clip the polygon using the perpendicular bisector half-plane
+      if (isPointInPolygon(rival, school.polygon)) {
+        const mid = {
+          x: (school.x + rival.x) / 2,
+          y: (school.y + rival.y) / 2,
+        };
+        const normal = {
+          x: school.x - rival.x,
+          y: school.y - rival.y,
+        };
+        const len = Math.sqrt(normal.x * normal.x + normal.y * normal.y);
+        if (len > 0.01) {
+          normal.x /= len;
+          normal.y /= len;
+        }
+        school.polygon = snapToPerimeter(clipPolygon(school.polygon, mid, normal));
+        school.polygons = [school.polygon];
+      }
+    });
   });
 
   // Run the strict catchment inclusion fail-safe
