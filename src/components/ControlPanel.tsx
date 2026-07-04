@@ -678,7 +678,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                   type="number"
                   id="bulk-runs-count"
                   min="1"
-                  max="10000"
+                  max="2500"
                   defaultValue="50"
                   className="w-full bg-slate-950 text-slate-200 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                   placeholder="e.g. 100"
@@ -709,6 +709,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                   const inputEl = document.getElementById('bulk-runs-count') as HTMLInputElement;
                   let count = inputEl ? parseInt(inputEl.value) : 50;
                   if (isNaN(count) || count < 1) count = 1;
+                  if (count > 2500) count = 2500;
                   onRunBulk(count);
                 }}
                 className={`w-full py-2 px-4 rounded-xl text-xs font-bold transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer ${
