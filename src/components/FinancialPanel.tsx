@@ -32,10 +32,10 @@ export const FinancialPanel: React.FC<FinancialPanelProps> = ({ financials }) =>
         </span>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-stretch">
-        {/* Left: Catchment Policy Column (Cols 1-2) */}
-        <div className="md:col-span-2 bg-slate-950/50 border border-slate-900 rounded-xl p-4 flex flex-col justify-between">
+      {/* Main Stack */}
+      <div className="flex flex-col gap-4">
+        {/* Left: Catchment Policy Column */}
+        <div className="bg-slate-950/50 border border-slate-900 rounded-xl p-4 flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center">
               <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Catchment Policy</span>
@@ -64,7 +64,7 @@ export const FinancialPanel: React.FC<FinancialPanelProps> = ({ financials }) =>
               </div>
               <div className="bg-slate-900/50 p-1.5 rounded-lg text-center">
                 <span className="text-xs">🚖</span>
-                <span className="block text-[8px] font-bold text-rose-450 mt-0.5">
+                <span className="block text-[8px] font-bold text-rose-455 mt-0.5">
                   {pluralize(financials.catchmentTaxis, 'Taxi', 'Taxis')}
                 </span>
               </div>
@@ -72,10 +72,10 @@ export const FinancialPanel: React.FC<FinancialPanelProps> = ({ financials }) =>
           </div>
         </div>
 
-        {/* Center: Analytical Verdict Banner (Col 3) */}
-        <div className="md:col-span-1 flex items-center justify-center">
+        {/* Center: Analytical Verdict Banner */}
+        <div className="flex items-center justify-center">
           {delta > 0 && (
-            <div className="bg-amber-955/40 text-amber-400 border border-amber-900/60 rounded-md p-3 text-sm font-medium text-center space-y-1.5 flex flex-col justify-center h-full w-full">
+            <div className="bg-amber-955/40 text-amber-400 border border-amber-900/60 rounded-md p-3 text-sm font-medium text-center space-y-1.5 flex flex-col justify-center w-full">
               <span className="text-base">⚠️</span>
               <p className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Verdict Inefficient</p>
               <p className="text-[10.5px] leading-snug font-medium">
@@ -85,7 +85,7 @@ export const FinancialPanel: React.FC<FinancialPanelProps> = ({ financials }) =>
           )}
 
           {delta === 0 && (
-            <div className="bg-slate-900 text-slate-400 border border-slate-800 rounded-md p-3 text-sm text-center space-y-1.5 flex flex-col justify-center h-full w-full">
+            <div className="bg-slate-900 text-slate-400 border border-slate-800 rounded-md p-3 text-sm text-center space-y-1.5 flex flex-col justify-center w-full">
               <span className="text-base">⚖️</span>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Verdict Neutral</p>
               <p className="text-[10.5px] leading-snug font-medium">
@@ -95,7 +95,7 @@ export const FinancialPanel: React.FC<FinancialPanelProps> = ({ financials }) =>
           )}
 
           {delta < 0 && (
-            <div className="bg-emerald-955/40 text-emerald-400 border border-emerald-900/60 rounded-md p-3 text-sm font-medium text-center space-y-1.5 flex flex-col justify-center h-full w-full">
+            <div className="bg-emerald-955/40 text-emerald-400 border border-emerald-900/60 rounded-md p-3 text-sm font-medium text-center space-y-1.5 flex flex-col justify-center w-full">
               <span className="text-base">✅</span>
               <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">Verdict Savings</p>
               <p className="text-[10.5px] leading-snug font-medium">
@@ -105,8 +105,8 @@ export const FinancialPanel: React.FC<FinancialPanelProps> = ({ financials }) =>
           )}
         </div>
 
-        {/* Right: Nearest School Policy Column (Cols 4-5) */}
-        <div className="md:col-span-2 bg-slate-950/50 border border-slate-900 rounded-xl p-4 flex flex-col justify-between">
+        {/* Right: Nearest School Policy Column */}
+        <div className="bg-slate-950/50 border border-slate-900 rounded-xl p-4 flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center">
               <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Nearest School Policy</span>

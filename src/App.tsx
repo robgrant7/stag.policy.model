@@ -312,6 +312,10 @@ function App() {
           onChangeTaxiCost={setTaxiCost}
         />
 
+        <FinancialPanel
+          financials={financials}
+        />
+
         {/* Context/Information block */}
         <div className="bg-slate-900/40 border border-slate-800/85 rounded-2xl p-5 text-xs text-slate-400 space-y-3">
           <h3 className="font-bold text-slate-350 uppercase tracking-wider text-[10px]">Policy Comparison Framework</h3>
@@ -333,21 +337,15 @@ function App() {
         </footer>
       </aside>
 
-      {/* Right Panel (Map Canvas + Side-by-side Comparison Dashboard) */}
-      <main className="w-2/3 h-full flex flex-col p-6 bg-slate-900 overflow-hidden gap-6 min-w-0">
-        <div className="flex-1 min-h-0 min-w-0">
-          <GridCanvas
-            households={displayedHouseholds}
-            centers={centers}
-            schools={schools}
-            clusterRadius={params.clusterRadius}
-            mapViewPolicy={mapViewPolicy}
-            onMapViewPolicyChange={setMapViewPolicy}
-          />
-        </div>
-
-        <FinancialPanel
-          financials={financials}
+      {/* Right Panel (Map Canvas Only) */}
+      <main className="w-2/3 h-full p-6 bg-slate-900 overflow-hidden">
+        <GridCanvas
+          households={displayedHouseholds}
+          centers={centers}
+          schools={schools}
+          clusterRadius={params.clusterRadius}
+          mapViewPolicy={mapViewPolicy}
+          onMapViewPolicyChange={setMapViewPolicy}
         />
       </main>
     </div>
