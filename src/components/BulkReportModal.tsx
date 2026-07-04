@@ -417,7 +417,7 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
                             onClick={() => onLoadRun(run)}
                             className="px-2.5 py-1 bg-slate-905 hover:bg-indigo-600 hover:text-white border border-slate-800 rounded-lg text-[10px] font-bold text-slate-300 transition-all opacity-80 group-hover:opacity-100 cursor-pointer"
                           >
-                            Load to Map
+                            {run.data ? 'Load to Map' : 'Load Sample'}
                           </button>
                         </td>
                       </tr>
@@ -439,7 +439,7 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
         
         {/* Footer */}
         <div className="p-4 border-t border-slate-800 bg-slate-950/20 text-center text-[10px] text-slate-500">
-          Click "Load to Map" on any row to close this modal and inject that exact scenario directly onto the spatial editor.
+          Click "Load to Map" or "Load Sample" on any row to close this modal and inject a scenario directly onto the spatial editor.
         </div>
 
       </div>

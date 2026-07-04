@@ -133,7 +133,7 @@ function App() {
     handleGenerate();
   }, []);
 
-  // Execute Bulk Simulation Runs concurrently in async chunks
+  // Execute Bulk Simulation Runs concurrently in async chunks (capped chunk sizes to prevent UI blocking)
   const handleRunBulk = (count: number) => {
     setIsBulking(true);
     setBulkProgress(0);
@@ -151,7 +151,8 @@ function App() {
     };
 
     const allResults: BulkRunResult[] = [];
-    const chunkSize = Math.max(1, Math.floor(count / 10)); // Chunk size (runs 10 blocks)
+    // Cap chunk size to 50 runs to ensure browser never hangs/freezes and layout stays responsive
+    const chunkSize = Math.min(50, Math.max(5, Math.floor(count / 20)));
 
     const runChunk = (startIndex: number) => {
       if (startIndex >= count) {
@@ -168,7 +169,14 @@ function App() {
       const chunkResults = runBulkSimulation(chunkCount, vehicleParams);
 
       chunkResults.forEach((r, idx) => {
-        r.runId = startIndex + idx + 1;
+        const runIdx = startIndex + idx;
+        r.runId = runIdx + 1;
+        
+        // Memory Optimization: prune data field for runs >= 250 to prevent huge JS heap footprint
+        if (runIdx >= 250) {
+          delete r.data;
+        }
+        
         allResults.push(r);
       });
 
@@ -177,13 +185,13 @@ function App() {
 
       setTimeout(() => {
         runChunk(endIndex);
-      }, 50);
+      }, 5); // very small timeout to keep UI fluid
     };
 
     // Trigger run loop
     setTimeout(() => {
       runChunk(0);
-    }, 50);
+    }, 10);
   };
 
   const handleLoadBulkRun = (run: BulkRunResult) => {
@@ -196,9 +204,29 @@ function App() {
       clusterRadius: run.params.clusterRadius,
     };
     setParams(newParams);
-    setCenters(run.data.centers);
-    setSchools(run.data.schools);
-    setHouseholds(run.data.households);
+    
+    if (run.data) {
+      setCenters(run.data.centers);
+      setSchools(run.data.schools);
+      setHouseholds(run.data.households);
+    } else {
+      // High-volume pruned run: regenerate scenario on the fly deteministically/randomly
+      const { households: rawHouseholds, centers: newCenters, schools: newSchools } = generateScenario(newParams);
+      const snapped = assignHouseholds(
+        rawHouseholds,
+        newSchools,
+        'catchment',
+        run.params.overlapRule,
+        run.params.legacySplit,
+        newCenters,
+        run.params.attractiveness,
+        true
+      );
+      setCenters(newCenters);
+      setSchools(newSchools);
+      setHouseholds(snapped);
+    }
+
     setOverlapRule(run.params.overlapRule);
     setLegacySplit(run.params.legacySplit);
     setAttractiveness(run.params.attractiveness);

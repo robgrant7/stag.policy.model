@@ -74,7 +74,7 @@ export interface BulkRunResult {
     nearestMinibuses: number;
     nearestTaxis: number;
   };
-  data: {
+  data?: {
     households: Household[];
     centers: SettlementCenter[];
     schools: School[];
