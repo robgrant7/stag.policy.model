@@ -830,38 +830,51 @@ export function generateScenario(params: ScenarioParams): {
   }
 
   // 4. Generate dynamic school catchment polygons satisfying administrative Y-sorted zoning (decoupled from physical distance)
-  // Let's sort schools horizontally to identify left-to-right ordering
-  const sortedSchools = [...schools].sort((a, b) => a.x - b.x);
+  const schoolAssignments: Record<string, string[]> = {};
+  
+  // Identify the home village center containing each school
+  const homeCenters = new Set<string>();
+  const anchorForSchool: Record<string, string> = {}; // schoolId -> centerId
+  
+  schools.forEach((s) => {
+    const matchingCenter = centers.find((c) => Math.abs(s.x - c.x) < 0.1 && Math.abs(s.y - c.y) < 0.1);
+    if (matchingCenter) {
+      homeCenters.add(matchingCenter.id);
+      anchorForSchool[s.id] = matchingCenter.id;
+    }
+  });
 
-  // Helper to generate organic curves with randomized pocket sways
-  function generateOrganicCurve(xMid: number, shift: number, swaySign: number): Point[] {
-    const points: Point[] = [];
-    const steps = 20;
-    const offset1 = Math.sin(xMid * 0.15) * 8.0;
-    const offset2 = Math.cos(xMid * 0.15) * -8.0;
+  // Assign each village to schools
+  centers.forEach((center) => {
+    let assignedSchools: string[] = [];
     
-    const p0 = { x: xMid, y: 100 };
-    const p1 = { x: xMid + offset1, y: 66 };
-    const p2 = { x: xMid + offset2, y: 33 };
-    const p3 = { x: xMid, y: 0 };
+    // If it's a home center of a school, it is assigned EXCLUSIVELY to that school to prevent rival pin engulfment
+    let isHome = false;
+    schools.forEach((s) => {
+      if (anchorForSchool[s.id] === center.id) {
+        assignedSchools = [s.id];
+        isHome = true;
+      }
+    });
     
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const oneMinusT = 1 - t;
-      const baseX = oneMinusT ** 3 * p0.x + 3 * oneMinusT ** 2 * t * p1.x + 3 * oneMinusT * t ** 2 * p2.x + t ** 3 * p3.x;
-      const baseY = oneMinusT ** 3 * p0.y + 3 * oneMinusT ** 2 * t * p1.y + 3 * oneMinusT * t ** 2 * p2.y + t ** 3 * p3.y;
+    if (!isHome) {
+      // For non-home centers, assign to the closest school and any school within 22 units of the closest
+      const distances = schools.map((s) => ({
+        id: s.id,
+        distance: Math.sqrt((center.x - s.x) ** 2 + (center.y - s.y) ** 2),
+      }));
+      distances.sort((a, b) => a.distance - b.distance);
+      const minDist = distances[0].distance;
       
-      // Organic segment variation for non-uniform overlap pocket width sways
-      const varShift = shift + Math.sin(i * 0.4) * 3.0 + (Math.sin(i * 0.9) * 1.5);
-      const x = baseX + swaySign * varShift;
-      
-      points.push({
-        x: Math.max(0, Math.min(100, Math.round(x * 10) / 10)),
-        y: Math.max(0, Math.min(100, Math.round(baseY * 10) / 10)),
+      distances.forEach((d) => {
+        if (d.distance <= minDist + 22.0) {
+          assignedSchools.push(d.id);
+        }
       });
     }
-    return points;
-  }
+    
+    schoolAssignments[center.id] = assignedSchools;
+  });
 
   // Snapping function to lock borders to canvas edges and prevent dead zones
   function snapToPerimeter(poly: Point[]): Point[] {
@@ -876,97 +889,31 @@ export function generateScenario(params: ScenarioParams): {
     });
   }
 
-  // Build catchments based on horizontal school slots
-  if (schoolCount === 1) {
-    const s = sortedSchools[0];
-    const poly = [
-      { x: 0, y: 100 },
-      { x: 100, y: 100 },
-      { x: 100, y: 0 },
-      { x: 0, y: 0 }
-    ];
-    s.polygon = snapToPerimeter(poly);
-    s.polygons = [s.polygon];
-  } else if (schoolCount === 2) {
-    const xMid = (sortedSchools[0].x + sortedSchools[1].x) / 2;
-    
-    const curve_R = generateOrganicCurve(xMid, 12.0, 1);
-    const curve_L = generateOrganicCurve(xMid, 12.0, -1);
-
-    const polyA = [
-      { x: 0, y: 100 },
-      ...curve_R,
-      { x: 0, y: 0 }
-    ];
-    const polyB = [
-      ...[...curve_L].reverse(),
-      { x: 100, y: 100 },
-      { x: 100, y: 0 }
-    ];
-
-    sortedSchools[0].polygon = snapToPerimeter(polyA);
-    sortedSchools[0].polygons = [sortedSchools[0].polygon];
-    
-    sortedSchools[1].polygon = snapToPerimeter(polyB);
-    sortedSchools[1].polygons = [sortedSchools[1].polygon];
-  } else if (schoolCount === 3) {
-    const xMid12 = (sortedSchools[0].x + sortedSchools[1].x) / 2;
-    const xMid23 = (sortedSchools[1].x + sortedSchools[2].x) / 2;
-
-    const curve_R12 = generateOrganicCurve(xMid12, 12.0, 1);
-    const curve_L12 = generateOrganicCurve(xMid12, 12.0, -1);
-    const curve_R23 = generateOrganicCurve(xMid23, 12.0, 1);
-    const curve_L23 = generateOrganicCurve(xMid23, 12.0, -1);
-
-    const polyA = [
-      { x: 0, y: 100 },
-      ...curve_R12,
-      { x: 0, y: 0 }
-    ];
-    const polyB = [
-      ...[...curve_L12].reverse(),
-      ...curve_R23
-    ];
-    const polyC = [
-      ...[...curve_L23].reverse(),
-      { x: 100, y: 100 },
-      { x: 100, y: 0 }
-    ];
-
-    sortedSchools[0].polygon = snapToPerimeter(polyA);
-    sortedSchools[0].polygons = [sortedSchools[0].polygon];
-
-    sortedSchools[1].polygon = snapToPerimeter(polyB);
-    sortedSchools[1].polygons = [sortedSchools[1].polygon];
-
-    sortedSchools[2].polygon = snapToPerimeter(polyC);
-    sortedSchools[2].polygons = [sortedSchools[2].polygon];
-  }
-
-  // Ensure that no school's coordinate pin falls inside a rival school's territory
+  // Calculate and merge Voronoi cells for each school
   schools.forEach((school) => {
-    schools.forEach((rival) => {
-      if (rival.id === school.id) return;
-      
-      // If rival pin falls inside school's polygon, clip the polygon using the perpendicular bisector half-plane
-      if (isPointInPolygon(rival, school.polygon)) {
-        const mid = {
-          x: (school.x + rival.x) / 2,
-          y: (school.y + rival.y) / 2,
-        };
-        const normal = {
-          x: school.x - rival.x,
-          y: school.y - rival.y,
-        };
-        const len = Math.sqrt(normal.x * normal.x + normal.y * normal.y);
-        if (len > 0.01) {
-          normal.x /= len;
-          normal.y /= len;
-        }
-        school.polygon = snapToPerimeter(clipPolygon(school.polygon, mid, normal));
-        school.polygons = [school.polygon];
+    const assignedCenters = centers.filter((c) => schoolAssignments[c.id].includes(school.id));
+    const baseCells = assignedCenters.map((c) => getVoronoiCellForCenter(c, centers));
+
+    if (baseCells.length > 0) {
+      const merged = mergePolygons(baseCells);
+      school.polygon = snapToPerimeter(merged);
+      school.polygons = [school.polygon];
+    } else {
+      // Fallback: simple polygon around the school center if somehow empty
+      const rad = 25.0;
+      const poly: Point[] = [];
+      const steps = 8;
+      for (let i = 0; i < steps; i++) {
+        const angle = (i * 2 * Math.PI) / steps;
+        poly.push({
+          x: Math.max(0, Math.min(100, Math.round((school.x + rad * Math.cos(angle)) * 10) / 10)),
+          y: Math.max(0, Math.min(100, Math.round((school.y + rad * Math.sin(angle)) * 10) / 10)),
+        });
       }
-    });
+      school.polygon = snapToPerimeter(poly);
+      school.polygons = [school.polygon];
+    }
+    school.pathD = undefined;
   });
 
   // Run the strict catchment inclusion fail-safe
