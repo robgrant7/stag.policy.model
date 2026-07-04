@@ -59,8 +59,8 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
     return center ? center.color : '#6366f1'; // indigo-500
   };
 
-  // Build grid ticks 0, 10, 20, ..., 100
-  const ticks = Array.from({ length: 11 }, (_, i) => i * 10);
+  // Build grid ticks 0, 50, 100, ..., 500
+  const ticks = Array.from({ length: 11 }, (_, i) => i * 50);
 
   return (
     <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-xl shadow-xl flex flex-col h-full">
@@ -75,7 +75,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
           </h2>
           <div className="flex flex-wrap items-center gap-2 mt-0.5">
             <p className="text-xs text-slate-400">
-              100x100 geographic space. Fills show school catchments.
+              500x500 geographic space. Fills show school catchments.
             </p>
             <span className="text-slate-700 hidden sm:inline">•</span>
             <div className="flex items-center gap-0.5 bg-slate-950 p-0.5 rounded-lg border border-slate-800/80">
@@ -237,11 +237,11 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
             <React.Fragment key={tick}>
               <div
                 className="absolute top-0 bottom-0 border-l border-slate-900/60 pointer-events-none"
-                style={{ left: `${tick}%` }}
+                style={{ left: `${tick / 5}%` }}
               />
               <div
                 className="absolute left-0 right-0 border-t border-slate-900/60 pointer-events-none"
-                style={{ bottom: `${tick}%` }}
+                style={{ bottom: `${tick / 5}%` }}
               />
             </React.Fragment>
           ))}
@@ -249,18 +249,18 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
           {/* Coordinate Labels along Axes */}
           {ticks.map((tick) => (
             <React.Fragment key={`label-${tick}`}>
-              {tick % 20 === 0 && (
+              {tick % 100 === 0 && (
                 <span
                   className="absolute -bottom-6 text-[10px] font-mono text-slate-500 -translate-x-1/2"
-                  style={{ left: `${tick}%` }}
+                  style={{ left: `${tick / 5}%` }}
                 >
                   {tick}
                 </span>
               )}
-              {tick % 20 === 0 && (
+              {tick % 100 === 0 && (
                 <span
                   className="absolute -left-6 text-[10px] font-mono text-slate-500 translate-y-1/2"
-                  style={{ bottom: `${tick}%` }}
+                  style={{ bottom: `${tick / 5}%` }}
                 >
                   {tick}
                 </span>
@@ -269,10 +269,10 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
           ))}
 
           {/* SVG Overlay Layer: Polygons and Assignment Vectors */}
-          {/* Note: In SVG, (0,0) is top-left, so we convert y coordinate: svg_y = 100 - y */}
+          {/* Note: In SVG, (0,0) is top-left, so we convert y coordinate: svg_y = 500 - y */}
           <svg
             className="absolute inset-0 w-full h-full pointer-events-none z-10"
-            viewBox="0 0 100 100"
+            viewBox="0 0 500 500"
             preserveAspectRatio="none"
           >
             <defs>
@@ -289,7 +289,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                   : [school.polygon];
                 return polys.map((poly, pIdx) => {
                   const pointsStr = poly
-                    .map((p) => `${p.x},${100 - p.y}`)
+                    .map((p) => `${p.x},${500 - p.y}`)
                     .join(' ');
                   return (
                     <polygon
@@ -324,9 +324,9 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                     <line
                       key={`route-${activeSchool.id}-${center.id}`}
                       x1={activeSchool.x}
-                      y1={100 - activeSchool.y}
+                      y1={500 - activeSchool.y}
                       x2={center.x}
-                      y2={100 - center.y}
+                      y2={500 - center.y}
                       stroke="#475569"
                       strokeWidth="1"
                       opacity="0.5"
@@ -350,9 +350,9 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                     <line
                       key={`leader-${h.id}`}
                       x1={h.x}
-                      y1={100 - h.y}
+                      y1={500 - h.y}
                       x2={school.x}
-                      y2={100 - school.y}
+                      y2={500 - school.y}
                       stroke={school.color}
                       strokeWidth="0.5"
                       opacity={0.15}
@@ -367,16 +367,16 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
           {/* Settlement Cluster Radius Rings (Faint overlays, scaled by final village headcount) */}
           {centers.map((center) => {
             const headcount = households.filter((h) => h.settlementId === center.id).length;
-            const localRadius = clusterRadius * Math.sqrt(headcount / 15);
+            const localRadius = clusterRadius * 5 * Math.sqrt(headcount / 15); // scaled by 5 for 500x500 space
             return (
               <div
                 key={`ring-${center.id}`}
                 className="absolute border border-dashed rounded-full pointer-events-none transition-all duration-300 ease-out"
                 style={{
-                  width: `${localRadius * 2}%`,
-                  height: `${localRadius * 2}%`,
-                  left: `${center.x - localRadius}%`,
-                  bottom: `${center.y - localRadius}%`,
+                  width: `${(localRadius * 2) / 5}%`,
+                  height: `${(localRadius * 2) / 5}%`,
+                  left: `${(center.x - localRadius) / 5}%`,
+                  bottom: `${(center.y - localRadius) / 5}%`,
                   borderColor: `${center.color}20`,
                   backgroundColor: `${center.color}02`,
                 }}
@@ -390,8 +390,8 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
               key={center.id}
               className="absolute -translate-x-1/2 translate-y-1/2 z-20 group cursor-pointer"
               style={{
-                left: `${center.x}%`,
-                bottom: `${center.y}%`,
+                left: `${center.x / 5}%`,
+                bottom: `${center.y / 5}%`,
               }}
               onMouseEnter={() => setHoveredPoint(center)}
               onMouseLeave={() => setHoveredPoint(null)}
@@ -417,8 +417,8 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                 key={school.id}
                 className="absolute -translate-x-1/2 translate-y-1/2 z-30 flex flex-col items-center group cursor-pointer"
                 style={{
-                  left: `${school.x}%`,
-                  bottom: `${school.y}%`,
+                  left: `${school.x / 5}%`,
+                  bottom: `${school.y / 5}%`,
                 }}
                 onMouseEnter={() => setHoveredPoint(school)}
                 onMouseLeave={() => setHoveredPoint(null)}
@@ -472,8 +472,8 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                 key={h.id}
                 className="absolute -translate-x-1/2 translate-y-1/2 z-20 group cursor-crosshair"
                 style={{
-                  left: `${h.x}%`,
-                  bottom: `${h.y}%`,
+                  left: `${h.x / 5}%`,
+                  bottom: `${h.y / 5}%`,
                 }}
                 onMouseEnter={() => setHoveredPoint(h)}
                 onMouseLeave={() => setHoveredPoint(null)}

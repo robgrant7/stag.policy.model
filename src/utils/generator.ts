@@ -8,6 +8,12 @@ const CLUSTER_COLORS = [
   '#ec4899', // Pink (Settlement D)
   '#06b6d4', // Cyan (Settlement E)
   '#f97316', // Orange (Settlement F)
+  '#14b8a6', // Teal (Settlement G)
+  '#6366f1', // Indigo (Settlement H)
+  '#a855f7', // Purple (Settlement I)
+  '#e11d48', // Rose (Settlement J)
+  '#fbbf24', // Amber-light (Settlement K)
+  '#84cc16', // Lime (Settlement L)
 ];
 
 /**
@@ -139,17 +145,17 @@ export function generateSettlementCenters(count: number): SettlementCenter[] {
   const suffixes = ['by', 'thorpe', 'wick', 'ley', 'oside', 'ford', 'ham', 'dale'];
 
   const centers: SettlementCenter[] = [];
-  const minDistance = 15; // Minimum distance buffer to prevent overlap
+  const minDistance = 50; // Minimum distance buffer to prevent overlap in 500x500 grid
   const usedNames = new Set<string>();
 
   for (let i = 0; i < count; i++) {
-    let bestX = 50;
-    let bestY = 50;
+    let bestX = 250;
+    let bestY = 250;
 
     for (let attempts = 0; attempts < 100; attempts++) {
-      // Wide range: X in [5, 95], Y in [10, 90]
-      const x = 5 + Math.random() * 90;
-      const y = 10 + Math.random() * 80;
+      // Wide range: X in [25, 475], Y in [50, 450]
+      const x = 25 + Math.random() * 450;
+      const y = 50 + Math.random() * 400;
 
       // Check distance to all existing centers
       let ok = true;
@@ -183,7 +189,7 @@ export function generateSettlementCenters(count: number): SettlementCenter[] {
     usedNames.add(villageName);
 
     const archetype = Math.random() < 0.4 ? 'linear' : 'nucleated';
-    const dispersionRadius = 6.0;
+    const dispersionRadius = 30.0; // scaled by 5 from 6.0
     const roadAngle = Math.round(Math.random() * 360);
 
     centers.push({
@@ -206,7 +212,7 @@ export function generateSettlementCenters(count: number): SettlementCenter[] {
  * Generates an irregular, simple (non-self-intersecting) polygon around a center point
  * by generating sorted radial angles and random distances between 25 and 45 units.
  */
-export function generateCatchmentPolygon(cx: number, cy: number, baseRadius = 35): { x: number; y: number }[] {
+export function generateCatchmentPolygon(cx: number, cy: number, baseRadius = 175): { x: number; y: number }[] {
   const vertexCount = 6 + Math.floor(Math.random() * 3); // 6 to 8 vertices
   const angles: number[] = [];
 
@@ -223,14 +229,14 @@ export function generateCatchmentPolygon(cx: number, cy: number, baseRadius = 35
 
   return angles.map((angle) => {
     // Generate radius with a small variance above baseRadius
-    const radius = baseRadius + Math.random() * 4;
+    const radius = baseRadius + Math.random() * 20;
     
     let x = cx + radius * Math.cos(angle);
     let y = cy + radius * Math.sin(angle);
     
-    // Clamp to 100x100 canvas bounds
-    x = Math.max(0, Math.min(100, x));
-    y = Math.max(0, Math.min(100, y));
+    // Clamp to 500x500 canvas bounds
+    x = Math.max(0, Math.min(500, x));
+    y = Math.max(0, Math.min(500, y));
 
     return {
       x: Math.round(x * 10) / 10,
@@ -249,15 +255,15 @@ export function generateSchools(count: number): School[] {
   const SCHOOL_IDS = ['school-a', 'school-b', 'school-c', 'school-d', 'school-e', 'school-f'] as const;
 
   for (let i = 0; i < count; i++) {
-    let x = 50;
+    let x = 250;
     if (count > 1) {
-      const defaultX = 10 + (i * 80) / (count - 1);
-      const offset = -4 + Math.random() * 8; // slight randomized offset
-      x = Math.max(5, Math.min(95, defaultX + offset));
+      const defaultX = 50 + (i * 400) / (count - 1);
+      const offset = (-4 + Math.random() * 8) * 5; // scaled randomized offset
+      x = Math.max(25, Math.min(475, defaultX + offset));
     } else {
-      x = 40 + Math.random() * 20;
+      x = 200 + Math.random() * 100;
     }
-    const y = 20 + Math.random() * 60;
+    const y = 100 + Math.random() * 300;
 
     schools.push({
       id: SCHOOL_IDS[i],
@@ -440,8 +446,8 @@ export function assignHouseholds(
               testY += r * Math.sin(theta);
             }
 
-            testX = Math.max(0, Math.min(100, testX));
-            testY = Math.max(0, Math.min(100, testY));
+            testX = Math.max(0, Math.min(500, testX));
+            testY = Math.max(0, Math.min(500, testY));
             
             const testPt = { x: Math.round(testX * 10) / 10, y: Math.round(testY * 10) / 10 };
             if (sortedSchools.some((school) => isPointInSchoolCatchment(testPt, school))) {
@@ -460,8 +466,8 @@ export function assignHouseholds(
       } else {
         // isolated household (outlier)
         for (let attempt = 0; attempt < 100; attempt++) {
-          const testX = Math.round((Math.random() * 100) * 10) / 10;
-          const testY = Math.round((Math.random() * 100) * 10) / 10;
+          const testX = Math.round((Math.random() * 500) * 10) / 10;
+          const testY = Math.round((Math.random() * 500) * 10) / 10;
           const testPt = { x: testX, y: testY };
           if (sortedSchools.some((school) => isPointInSchoolCatchment(testPt, school))) {
             updatedX = testX;
@@ -622,9 +628,9 @@ function clipPolygon(poly: Point[], linePoint: Point, normal: Point): Point[] {
 
 export function getVoronoiCellForCenter(center: SettlementCenter, allCenters: SettlementCenter[]): Point[] {
   let cell: Point[] = [
-    { x: 0, y: 100 },
-    { x: 100, y: 100 },
-    { x: 100, y: 0 },
+    { x: 0, y: 500 },
+    { x: 500, y: 500 },
+    { x: 500, y: 0 },
     { x: 0, y: 0 },
   ];
 
@@ -887,8 +893,8 @@ export function generateScenario(params: ScenarioParams): {
         y += r * Math.sin(theta);
       }
       
-      x = Math.max(0, Math.min(100, x));
-      y = Math.max(0, Math.min(100, y));
+      x = Math.max(0, Math.min(500, x));
+      y = Math.max(0, Math.min(500, y));
 
       households.push({
         id: `village-${center.id}-${i + 1}`,
@@ -903,8 +909,8 @@ export function generateScenario(params: ScenarioParams): {
   // 3. Generate isolated households (scattered across un-utilized open grid countryside cells)
   const utilizedCells = new Set<string>();
   centers.forEach((c) => {
-    const row = Math.max(0, Math.min(9, Math.floor(c.y / 10)));
-    const col = Math.max(0, Math.min(9, Math.floor(c.x / 10)));
+    const row = Math.max(0, Math.min(9, Math.floor(c.y / 50)));
+    const col = Math.max(0, Math.min(9, Math.floor(c.x / 50)));
     utilizedCells.add(`${row},${col}`);
   });
 
@@ -922,8 +928,8 @@ export function generateScenario(params: ScenarioParams): {
       ? unutilized[Math.floor(Math.random() * unutilized.length)]
       : { row: Math.floor(Math.random() * 10), col: Math.floor(Math.random() * 10) };
 
-    const x = cell.col * 10 + Math.random() * 10;
-    const y = cell.row * 10 + Math.random() * 10;
+    const x = cell.col * 50 + Math.random() * 50;
+    const y = cell.row * 50 + Math.random() * 50;
 
     households.push({
       id: `isolated-${i + 1}`,
@@ -1009,7 +1015,7 @@ export function generateScenario(params: ScenarioParams): {
   function snapToPerimeter(poly: Point[]): Point[] {
     if (poly.length === 0) return [];
     
-    let minX = 100, maxX = 0, minY = 100, maxY = 0;
+    let minX = 500, maxX = 0, minY = 500, maxY = 0;
     poly.forEach((p) => {
       if (p.x < minX) minX = p.x;
       if (p.x > maxX) maxX = p.x;
@@ -1020,10 +1026,10 @@ export function generateScenario(params: ScenarioParams): {
     return poly.map((p) => {
       let x = p.x;
       let y = p.y;
-      if (minX <= 35.0 && x <= 35.0) x = 0;
-      if (maxX >= 65.0 && x >= 65.0) x = 100;
-      if (minY <= 35.0 && y <= 35.0) y = 0;
-      if (maxY >= 65.0 && y >= 65.0) y = 100;
+      if (minX <= 175.0 && x <= 175.0) x = 0;
+      if (maxX >= 325.0 && x >= 325.0) x = 500;
+      if (minY <= 175.0 && y <= 175.0) y = 0;
+      if (maxY >= 325.0 && y >= 325.0) y = 500;
       return { x, y };
     });
   }
@@ -1039,14 +1045,14 @@ export function generateScenario(params: ScenarioParams): {
       school.polygon = school.polygons[0] || [];
     } else {
       // Fallback: simple polygon around the school center if somehow empty
-      const rad = 25.0;
+      const rad = 125.0; // scaled by 5
       const poly: Point[] = [];
       const steps = 8;
       for (let i = 0; i < steps; i++) {
         const angle = (i * 2 * Math.PI) / steps;
         poly.push({
-          x: Math.max(0, Math.min(100, Math.round((school.x + rad * Math.cos(angle)) * 10) / 10)),
-          y: Math.max(0, Math.min(100, Math.round((school.y + rad * Math.sin(angle)) * 10) / 10)),
+          x: Math.max(0, Math.min(500, Math.round((school.x + rad * Math.cos(angle)) * 10) / 10)),
+          y: Math.max(0, Math.min(500, Math.round((school.y + rad * Math.sin(angle)) * 10) / 10)),
         });
       }
       school.polygon = snapToPerimeter(poly);
@@ -1296,8 +1302,8 @@ export function repositionUncoveredHouseholds(
             testY += r * Math.sin(theta);
           }
 
-          testX = Math.max(0, Math.min(100, testX));
-          testY = Math.max(0, Math.min(100, testY));
+          testX = Math.max(0, Math.min(500, testX));
+          testY = Math.max(0, Math.min(500, testY));
           
           const testPt = { x: Math.round(testX * 10) / 10, y: Math.round(testY * 10) / 10 };
           if (schools.some((school) => isPointInSchoolCatchment(testPt, school))) {
@@ -1325,8 +1331,8 @@ export function repositionUncoveredHouseholds(
       let found = false;
 
       for (let attempt = 0; attempt < 100; attempt++) {
-        const testX = Math.round((Math.random() * 100) * 10) / 10;
-        const testY = Math.round((Math.random() * 100) * 10) / 10;
+        const testX = Math.round((Math.random() * 500) * 10) / 10;
+        const testY = Math.round((Math.random() * 500) * 10) / 10;
         const testPt = { x: testX, y: testY };
         if (schools.some((school) => isPointInSchoolCatchment(testPt, school))) {
           newX = testX;
@@ -1395,8 +1401,8 @@ export function regenerateHouseholdsForCenters(
         y += r * Math.sin(theta);
       }
       
-      x = Math.max(0, Math.min(100, x));
-      y = Math.max(0, Math.min(100, y));
+      x = Math.max(0, Math.min(500, x));
+      y = Math.max(0, Math.min(500, y));
 
       households.push({
         id: `village-${center.id}-${i + 1}`,
@@ -1411,8 +1417,8 @@ export function regenerateHouseholdsForCenters(
   // Re-generate isolated households (scattered across un-utilized open grid countryside cells)
   const utilizedCells = new Set<string>();
   centers.forEach((c) => {
-    const row = Math.max(0, Math.min(9, Math.floor(c.y / 10)));
-    const col = Math.max(0, Math.min(9, Math.floor(c.x / 10)));
+    const row = Math.max(0, Math.min(9, Math.floor(c.y / 50)));
+    const col = Math.max(0, Math.min(9, Math.floor(c.x / 50)));
     utilizedCells.add(`${row},${col}`);
   });
 
@@ -1430,8 +1436,8 @@ export function regenerateHouseholdsForCenters(
       ? unutilized[Math.floor(Math.random() * unutilized.length)]
       : { row: Math.floor(Math.random() * 10), col: Math.floor(Math.random() * 10) };
 
-    const x = cell.col * 10 + Math.random() * 10;
-    const y = cell.row * 10 + Math.random() * 10;
+    const x = cell.col * 50 + Math.random() * 50;
+    const y = cell.row * 50 + Math.random() * 50;
 
     households.push({
       id: `isolated-${i + 1}`,

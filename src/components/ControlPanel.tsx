@@ -339,30 +339,22 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               </div>
             </div>
 
-            {/* Settlement Count Picker */}
+            {/* Settlement Count Dropdown */}
             <div className="space-y-2">
               <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                 Number of Settlements
               </label>
-              <div className="grid grid-cols-6 gap-1 bg-slate-955 p-1.5 rounded-xl border border-slate-800/80">
-                {[1, 2, 3, 4, 5, 6].map((count) => {
-                  const isActive = params.settlementCount === count;
-                  return (
-                    <button
-                      key={count}
-                      type="button"
-                      onClick={() => handleSettlementChange(count)}
-                      className={`py-1.5 px-2 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer ${
-                        isActive
-                          ? 'bg-slate-850 text-white border border-slate-700/60 shadow-sm'
-                          : 'text-slate-455 hover:text-slate-200 hover:bg-slate-900'
-                      }`}
-                    >
-                      {count}
-                    </button>
-                  );
-                })}
-              </div>
+              <select
+                value={params.settlementCount}
+                onChange={(e) => handleSettlementChange(parseInt(e.target.value))}
+                className="w-full bg-slate-950 text-slate-200 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((count) => (
+                  <option key={count} value={count}>
+                    {count} {count === 1 ? 'Settlement' : 'Settlements'}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Village Households Slider */}
