@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import type { ScenarioParams, TransportPolicy, SettlementCenter } from '../types';
+import type { ScenarioParams, SettlementCenter } from '../types';
 
 interface ControlPanelProps {
   params: ScenarioParams;
   onChangeParams: (params: ScenarioParams) => void;
-  transportPolicy: TransportPolicy;
-  onPolicyChange: (policy: TransportPolicy) => void;
   overlapRule: 'community' | 'legacy_slider';
   onOverlapRuleChange: (rule: 'community' | 'legacy_slider') => void;
   legacySplit: { a: number; b: number; c: number };
@@ -18,7 +16,7 @@ interface ControlPanelProps {
   onUpdateVillage?: (villageId: string, fields: Partial<SettlementCenter>) => void;
   onResetVillages?: () => void;
   
-  // New Vehicle Slider Props
+  // Vehicle Slider Props
   coachCapacity: number;
   onChangeCoachCapacity: (val: number) => void;
   coachThreshold: number;
@@ -40,8 +38,6 @@ interface ControlPanelProps {
 export const ControlPanel: React.FC<ControlPanelProps> = ({
   params,
   onChangeParams,
-  transportPolicy,
-  onPolicyChange,
   overlapRule,
   onOverlapRuleChange,
   legacySplit,
@@ -110,24 +106,24 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
           Scenario Configuration
         </h2>
         <p className="text-xs text-slate-400 mt-1">
-          Configure vehicle logistics and distribution parameters for rural mapping.
+          Configure vehicle logistics and distribution parameters for parallel policy modeling.
         </p>
       </div>
 
       {/* Accordion Panels */}
       <div className="flex flex-col gap-4">
-        {/* Accordion 1: Policy & Global Rates */}
+        {/* Accordion 1: Vehicle Fleet Tiers */}
         <div className="border-b border-slate-800 pb-4">
           <button
             type="button"
-            onClick={() => toggleAccordion('policy')}
+            onClick={() => toggleAccordion('vehicles')}
             className="w-full flex items-center justify-between py-2 text-xs font-bold text-slate-300 hover:text-slate-100 transition-colors uppercase tracking-wider cursor-pointer select-none"
           >
             <span className="flex items-center gap-2">
-              <span className="text-indigo-400 text-sm">⚖️</span> Accordion 1: Policy & Global Rates
+              <span className="text-indigo-400 text-sm">🚌</span> Accordion 1: Vehicle Fleet Tiers
             </span>
             <svg
-              className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeAccordion === 'policy' ? 'rotate-180' : ''}`}
+              className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeAccordion === 'vehicles' ? 'rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -138,49 +134,294 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 
           <div
             className={`transition-all duration-300 ease-in-out overflow-hidden ${
-              activeAccordion === 'policy' ? 'max-h-[1000px] opacity-100 mt-4 space-y-4' : 'max-h-0 opacity-0 pointer-events-none'
+              activeAccordion === 'vehicles' ? 'max-h-[1200px] opacity-100 mt-4 space-y-5' : 'max-h-0 opacity-0 pointer-events-none'
             }`}
           >
-            {/* Policy Switcher (High Visibility) */}
-            <div className="space-y-2">
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-indigo-400">
-                Active Transport Policy
-              </label>
-              <div className="grid grid-cols-2 gap-2 bg-indigo-950/20 p-1.5 rounded-xl border border-indigo-900/30">
-                <button
-                  type="button"
-                  onClick={() => onPolicyChange('catchment')}
-                  className={`py-2 px-3 rounded-lg text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
-                    transportPolicy === 'catchment'
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-500/20'
-                      : 'text-indigo-300/70 hover:text-indigo-200 hover:bg-indigo-950/40'
-                  }`}
-                >
-                  <span>Catchment School</span>
-                  <span className="text-[9px] font-normal opacity-85">Polygons & Overlaps</span>
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={() => onPolicyChange('nearest')}
-                  className={`py-2 px-3 rounded-lg text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
-                    transportPolicy === 'nearest'
-                      ? 'bg-gradient-to-r from-emerald-600 to-emerald-750 text-white shadow-md shadow-emerald-500/20'
-                      : 'text-emerald-300/70 hover:text-emerald-200 hover:bg-emerald-950/40'
-                  }`}
-                >
-                  <span>Nearest School</span>
-                  <span className="text-[9px] font-normal opacity-85">Straight Euclidean</span>
-                </button>
+            {/* Taxi parameters */}
+            <div className="space-y-3 p-3.5 bg-slate-955/40 border border-slate-855 rounded-xl">
+              <div className="flex items-center gap-2 text-slate-305 font-bold text-[10px] uppercase tracking-wider border-b border-slate-900 pb-1.5">
+                <span className="text-rose-400 text-xs">🚕</span> TAXI TIER
+              </div>
+              {/* Capacity */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-slate-455 font-medium">Taxi Capacity</span>
+                  <span className="text-rose-400 font-bold">{taxiCapacity} pupils</span>
+                </div>
+                <input
+                  type="range"
+                  min="2"
+                  max="6"
+                  step="1"
+                  value={taxiCapacity}
+                  onChange={(e) => onChangeTaxiCapacity(parseInt(e.target.value))}
+                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-rose-500 border border-slate-855"
+                />
+              </div>
+              {/* Cost */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-slate-455 font-medium">Taxi Daily Rate (Point-to-Point)</span>
+                  <span className="text-rose-400 font-bold">£{taxiCost}/day</span>
+                </div>
+                <input
+                  type="range"
+                  min="20"
+                  max="100"
+                  step="5"
+                  value={taxiCost}
+                  onChange={(e) => onChangeTaxiCost(parseInt(e.target.value))}
+                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-rose-500 border border-slate-855"
+                />
               </div>
             </div>
 
+            {/* Minibus parameters */}
+            <div className="space-y-3 p-3.5 bg-slate-955/40 border border-slate-855 rounded-xl">
+              <div className="flex items-center gap-2 text-slate-305 font-bold text-[10px] uppercase tracking-wider border-b border-slate-900 pb-1.5">
+                <span className="text-emerald-400 text-xs">🚐</span> MINIBUS TIER
+              </div>
+              {/* Capacity */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-slate-455 font-medium">Minibus Capacity</span>
+                  <span className="text-emerald-400 font-bold">{minibusCapacity} pupils</span>
+                </div>
+                <input
+                  type="range"
+                  min="8"
+                  max="24"
+                  step="2"
+                  value={minibusCapacity}
+                  onChange={(e) => onChangeMinibusCapacity(parseInt(e.target.value))}
+                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-emerald-500 border border-slate-855"
+                />
+              </div>
+              {/* Threshold */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-slate-455 font-medium">Minibus Min Threshold</span>
+                  <span className="text-emerald-400 font-bold">{minibusThreshold} pupils</span>
+                </div>
+                <input
+                  type="range"
+                  min="4"
+                  max="12"
+                  step="1"
+                  value={minibusThreshold}
+                  onChange={(e) => onChangeMinibusThreshold(parseInt(e.target.value))}
+                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-emerald-500 border border-slate-855"
+                />
+              </div>
+              {/* Cost */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-slate-455 font-medium">Minibus Daily Rate</span>
+                  <span className="text-emerald-400 font-bold">£{minibusCost}/day</span>
+                </div>
+                <input
+                  type="range"
+                  min="60"
+                  max="200"
+                  step="5"
+                  value={minibusCost}
+                  onChange={(e) => onChangeMinibusCost(parseInt(e.target.value))}
+                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-emerald-500 border border-slate-855"
+                />
+              </div>
+            </div>
+
+            {/* Coach parameters */}
+            <div className="space-y-3 p-3.5 bg-slate-955/40 border border-slate-855 rounded-xl">
+              <div className="flex items-center gap-2 text-slate-305 font-bold text-[10px] uppercase tracking-wider border-b border-slate-900 pb-1.5">
+                <span className="text-indigo-400 text-xs">🚌</span> COACH TIER
+              </div>
+              {/* Capacity */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-slate-455 font-medium">Coach Capacity</span>
+                  <span className="text-indigo-400 font-bold">{coachCapacity} pupils</span>
+                </div>
+                <input
+                  type="range"
+                  min="30"
+                  max="70"
+                  step="5"
+                  value={coachCapacity}
+                  onChange={(e) => onChangeCoachCapacity(parseInt(e.target.value))}
+                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-indigo-500 border border-slate-855"
+                />
+              </div>
+              {/* Threshold */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-slate-455 font-medium">Coach Min Threshold</span>
+                  <span className="text-indigo-400 font-bold">{coachThreshold} pupils</span>
+                </div>
+                <input
+                  type="range"
+                  min="20"
+                  max="50"
+                  step="5"
+                  value={coachThreshold}
+                  onChange={(e) => onChangeCoachThreshold(parseInt(e.target.value))}
+                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-indigo-500 border border-slate-855"
+                />
+              </div>
+              {/* Cost */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-slate-455 font-medium">Coach Daily Rate</span>
+                  <span className="text-indigo-400 font-bold">£{coachCost}/day</span>
+                </div>
+                <input
+                  type="range"
+                  min="150"
+                  max="500"
+                  step="10"
+                  value={coachCost}
+                  onChange={(e) => onChangeCoachCost(parseInt(e.target.value))}
+                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-indigo-500 border border-slate-855"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Accordion 2: Scenario Density Controls */}
+        <div className="border-b border-slate-800 pb-4">
+          <button
+            type="button"
+            onClick={() => toggleAccordion('density')}
+            className="w-full flex items-center justify-between py-2 text-xs font-bold text-slate-300 hover:text-slate-100 transition-colors uppercase tracking-wider cursor-pointer select-none"
+          >
+            <span className="flex items-center gap-2">
+              <span className="text-indigo-400 text-sm">📊</span> Accordion 2: Scenario Density Controls
+            </span>
+            <svg
+              className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeAccordion === 'density' ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          <div
+            className={`transition-all duration-300 ease-in-out overflow-hidden ${
+              activeAccordion === 'density' ? 'max-h-[1000px] opacity-100 mt-4 space-y-4' : 'max-h-0 opacity-0 pointer-events-none'
+            }`}
+          >
+            {/* School Count Picker */}
+            <div className="space-y-2">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Number of Schools
+              </label>
+              <div className="grid grid-cols-3 gap-1 bg-slate-950 p-1.5 rounded-xl border border-slate-800/80">
+                {[1, 2, 3].map((count) => {
+                  const isActive = params.schoolCount === count;
+                  return (
+                    <button
+                      key={count}
+                      type="button"
+                      onClick={() => handleSchoolCountChange(count)}
+                      className={`py-1.5 px-3 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer ${
+                        isActive
+                          ? 'bg-slate-850 text-white border border-slate-700/60 shadow-sm'
+                          : 'text-slate-455 hover:text-slate-200 hover:bg-slate-900'
+                      }`}
+                    >
+                      {count}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Settlement Count Picker */}
+            <div className="space-y-2">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Number of Settlements
+              </label>
+              <div className="grid grid-cols-6 gap-1 bg-slate-955 p-1.5 rounded-xl border border-slate-800/80">
+                {[1, 2, 3, 4, 5, 6].map((count) => {
+                  const isActive = params.settlementCount === count;
+                  return (
+                    <button
+                      key={count}
+                      type="button"
+                      onClick={() => handleSettlementChange(count)}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer ${
+                        isActive
+                          ? 'bg-slate-850 text-white border border-slate-700/60 shadow-sm'
+                          : 'text-slate-455 hover:text-slate-200 hover:bg-slate-900'
+                      }`}
+                    >
+                      {count}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Village Households Slider */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-400 font-medium">Village Households</span>
+                <span className="text-indigo-400 font-bold">{params.villageCount}</span>
+              </div>
+              <input
+                type="range"
+                min="50"
+                max="300"
+                step="10"
+                value={params.villageCount}
+                onChange={(e) => handleSliderChange('villageCount', parseInt(e.target.value))}
+                className="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500 border border-slate-800"
+              />
+            </div>
+
+            {/* Isolated Outliers Slider */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-400 font-medium">Isolated Outliers (% of Total)</span>
+                <span className="text-rose-400 font-bold">{params.isolatedPercentage}% ({params.isolatedCount})</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="40"
+                step="5"
+                value={params.isolatedPercentage}
+                onChange={(e) => handleSliderChange('isolatedPercentage', parseInt(e.target.value))}
+                className="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500 border border-slate-800"
+              />
+            </div>
+
+            {/* Cluster Radius Slider */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-400 font-medium">Village Cluster Radius</span>
+                <span className="text-indigo-400 font-bold">{params.clusterRadius} u</span>
+              </div>
+              <input
+                type="range"
+                min="3"
+                max="25"
+                step="1"
+                value={params.clusterRadius}
+                onChange={(e) => handleSliderChange('clusterRadius', parseInt(e.target.value))}
+                className="w-full h-1.5 bg-slate-955 rounded-lg appearance-none cursor-pointer accent-indigo-500 border border-slate-800"
+              />
+            </div>
+
             {/* Overlap Assignment Controls */}
-            {transportPolicy === 'catchment' && params.schoolCount > 1 && (
-              <div className="space-y-4 p-4 rounded-xl border border-indigo-950/40 bg-indigo-950/5">
+            {params.schoolCount > 1 && (
+              <div className="space-y-4 p-4 rounded-xl border border-indigo-950/40 bg-indigo-950/5 mt-4">
                 <div className="space-y-2">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-indigo-400">
-                    Overlap Assignment Rule
+                    Catchment Overlap Rule
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     <button
@@ -188,8 +429,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                       onClick={() => onOverlapRuleChange('community')}
                       className={`p-3 rounded-xl border text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-1 text-center ${
                         overlapRule === 'community'
-                          ? 'bg-indigo-950/40 border-indigo-500 text-indigo-200 ring-2 ring-indigo-500/20'
-                          : 'bg-slate-950/60 border-slate-850 text-slate-450 hover:text-slate-200 hover:border-slate-800'
+                          ? 'bg-indigo-955/40 border-indigo-500 text-indigo-200 ring-2 ring-indigo-500/20'
+                          : 'bg-slate-950/60 border-slate-855 text-slate-450 hover:text-slate-200 hover:border-slate-800'
                       }`}
                     >
                       <span className="font-extrabold text-[11px]">Feeder Settlement Unity</span>
@@ -201,8 +442,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                       onClick={() => onOverlapRuleChange('legacy_slider')}
                       className={`p-3 rounded-xl border text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-1 text-center ${
                         overlapRule === 'legacy_slider'
-                          ? 'bg-indigo-950/40 border-indigo-500 text-indigo-200 ring-2 ring-indigo-500/20'
-                          : 'bg-slate-950/60 border-slate-850 text-slate-450 hover:text-slate-200 hover:border-slate-800'
+                          ? 'bg-indigo-955/40 border-indigo-500 text-indigo-200 ring-2 ring-indigo-500/20'
+                          : 'bg-slate-950/60 border-slate-855 text-slate-450 hover:text-slate-200 hover:border-slate-800'
                       }`}
                     >
                       <span className="font-extrabold text-[11px]">Historical Legacy Split</span>
@@ -284,337 +525,14 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                         );
                       })}
                     </div>
-                    <p className="text-[8.5px] text-slate-500 leading-tight">
-                      {"* Attractiveness alters pupil routing utility: \\(Utility = \\frac{1.0 + Attractiveness}{Distance}\\) strictly in overlap corridors."}
-                    </p>
                   </div>
-                )}
-                
-                {overlapRule === 'community' && (
-                  <p className="text-[9px] text-slate-500 leading-tight">
-                    * Feeder Settlement Unity: Village student nodes in the overlap corridor are assigned as a single block based on village centroid proximity. Outliers fallback to closest center.
-                  </p>
                 )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Accordion 2: Alternative Vehicle Tiers */}
-        <div className="border-b border-slate-800 pb-4">
-          <button
-            type="button"
-            onClick={() => toggleAccordion('vehicles')}
-            className="w-full flex items-center justify-between py-2 text-xs font-bold text-slate-300 hover:text-slate-100 transition-colors uppercase tracking-wider cursor-pointer select-none"
-          >
-            <span className="flex items-center gap-2">
-              <span className="text-indigo-400 text-sm">🚌</span> Accordion 2: Alternative Vehicle Tiers
-            </span>
-            <svg
-              className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeAccordion === 'vehicles' ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-
-          <div
-            className={`transition-all duration-300 ease-in-out overflow-hidden ${
-              activeAccordion === 'vehicles' ? 'max-h-[1200px] opacity-100 mt-4 space-y-5' : 'max-h-0 opacity-0 pointer-events-none'
-            }`}
-          >
-            {/* Coach parameters */}
-            <div className="space-y-3 p-3.5 bg-slate-950/40 border border-slate-855 rounded-xl">
-              <div className="flex items-center gap-2 text-slate-300 font-bold text-[10px] uppercase tracking-wider border-b border-slate-900 pb-1.5">
-                <span className="text-indigo-400 text-xs">🎫</span> Coach Parameters
-              </div>
-              
-              {/* Capacity */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-450 font-medium">Coach Capacity</span>
-                  <span className="text-indigo-400 font-bold">{coachCapacity} pupils</span>
-                </div>
-                <input
-                  type="range"
-                  min="30"
-                  max="70"
-                  step="5"
-                  value={coachCapacity}
-                  onChange={(e) => onChangeCoachCapacity(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-indigo-500 border border-slate-855"
-                />
-              </div>
-
-              {/* Threshold */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-455 font-medium">Coach Min Threshold</span>
-                  <span className="text-indigo-400 font-bold">{coachThreshold} pupils</span>
-                </div>
-                <input
-                  type="range"
-                  min="20"
-                  max="50"
-                  step="5"
-                  value={coachThreshold}
-                  onChange={(e) => onChangeCoachThreshold(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-indigo-500 border border-slate-855"
-                />
-              </div>
-
-              {/* Cost */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-455 font-medium">Coach Daily Rate</span>
-                  <span className="text-indigo-400 font-bold">£{coachCost}/day</span>
-                </div>
-                <input
-                  type="range"
-                  min="150"
-                  max="500"
-                  step="10"
-                  value={coachCost}
-                  onChange={(e) => onChangeCoachCost(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-indigo-500 border border-slate-855"
-                />
-              </div>
-            </div>
-
-            {/* Minibus parameters */}
-            <div className="space-y-3 p-3.5 bg-slate-950/40 border border-slate-855 rounded-xl">
-              <div className="flex items-center gap-2 text-slate-300 font-bold text-[10px] uppercase tracking-wider border-b border-slate-900 pb-1.5">
-                <span className="text-emerald-400 text-xs">🚐</span> Minibus Parameters
-              </div>
-              
-              {/* Capacity */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-455 font-medium">Minibus Capacity</span>
-                  <span className="text-emerald-400 font-bold">{minibusCapacity} pupils</span>
-                </div>
-                <input
-                  type="range"
-                  min="8"
-                  max="24"
-                  step="2"
-                  value={minibusCapacity}
-                  onChange={(e) => onChangeMinibusCapacity(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-emerald-500 border border-slate-855"
-                />
-              </div>
-
-              {/* Threshold */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-455 font-medium">Minibus Min Threshold</span>
-                  <span className="text-emerald-400 font-bold">{minibusThreshold} pupils</span>
-                </div>
-                <input
-                  type="range"
-                  min="4"
-                  max="12"
-                  step="1"
-                  value={minibusThreshold}
-                  onChange={(e) => onChangeMinibusThreshold(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-emerald-500 border border-slate-855"
-                />
-              </div>
-
-              {/* Cost */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-455 font-medium">Minibus Daily Rate</span>
-                  <span className="text-emerald-400 font-bold">£{minibusCost}/day</span>
-                </div>
-                <input
-                  type="range"
-                  min="60"
-                  max="200"
-                  step="5"
-                  value={minibusCost}
-                  onChange={(e) => onChangeMinibusCost(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-emerald-500 border border-slate-855"
-                />
-              </div>
-            </div>
-
-            {/* Taxi parameters */}
-            <div className="space-y-3 p-3.5 bg-slate-950/40 border border-slate-855 rounded-xl">
-              <div className="flex items-center gap-2 text-slate-300 font-bold text-[10px] uppercase tracking-wider border-b border-slate-900 pb-1.5">
-                <span className="text-rose-400 text-xs">🚕</span> Localized Taxi Parameters
-              </div>
-              
-              {/* Capacity */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-455 font-medium">Taxi Capacity</span>
-                  <span className="text-rose-400 font-bold">{taxiCapacity} pupils</span>
-                </div>
-                <input
-                  type="range"
-                  min="2"
-                  max="6"
-                  step="1"
-                  value={taxiCapacity}
-                  onChange={(e) => onChangeTaxiCapacity(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-rose-500 border border-slate-855"
-                />
-              </div>
-
-              {/* Cost */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-455 font-medium">Taxi Daily Rate (Point-to-Point)</span>
-                  <span className="text-rose-400 font-bold">£{taxiCost}/day</span>
-                </div>
-                <input
-                  type="range"
-                  min="20"
-                  max="100"
-                  step="5"
-                  value={taxiCost}
-                  onChange={(e) => onChangeTaxiCost(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-rose-500 border border-slate-855"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Accordion 3: Scenario Density Controls */}
-        <div className="border-b border-slate-800 pb-4">
-          <button
-            type="button"
-            onClick={() => toggleAccordion('density')}
-            className="w-full flex items-center justify-between py-2 text-xs font-bold text-slate-300 hover:text-slate-100 transition-colors uppercase tracking-wider cursor-pointer select-none"
-          >
-            <span className="flex items-center gap-2">
-              <span className="text-indigo-400 text-sm">📊</span> Accordion 3: Scenario Density Controls
-            </span>
-            <svg
-              className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeAccordion === 'density' ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-
-          <div
-            className={`transition-all duration-300 ease-in-out overflow-hidden ${
-              activeAccordion === 'density' ? 'max-h-[1000px] opacity-100 mt-4 space-y-4' : 'max-h-0 opacity-0 pointer-events-none'
-            }`}
-          >
-            {/* School Count Picker */}
-            <div className="space-y-2">
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                Number of Schools
-              </label>
-              <div className="grid grid-cols-3 gap-1 bg-slate-950 p-1.5 rounded-xl border border-slate-800/80">
-                {[1, 2, 3].map((count) => {
-                  const isActive = params.schoolCount === count;
-                  return (
-                    <button
-                      key={count}
-                      type="button"
-                      onClick={() => handleSchoolCountChange(count)}
-                      className={`py-1.5 px-3 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer ${
-                        isActive
-                          ? 'bg-slate-850 text-white border border-slate-700/60 shadow-sm'
-                          : 'text-slate-455 hover:text-slate-200 hover:bg-slate-900'
-                      }`}
-                    >
-                      {count}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Settlement Count Picker */}
-            <div className="space-y-2">
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                Number of Settlements
-              </label>
-              <div className="grid grid-cols-6 gap-1 bg-slate-950 p-1.5 rounded-xl border border-slate-800/80">
-                {[1, 2, 3, 4, 5, 6].map((count) => {
-                  const isActive = params.settlementCount === count;
-                  return (
-                    <button
-                      key={count}
-                      type="button"
-                      onClick={() => handleSettlementChange(count)}
-                      className={`py-1.5 px-2 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer ${
-                        isActive
-                          ? 'bg-slate-850 text-white border border-slate-700/60 shadow-sm'
-                          : 'text-slate-455 hover:text-slate-200 hover:bg-slate-900'
-                      }`}
-                    >
-                      {count}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Village Households Slider */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-400 font-medium">Village Households</span>
-                <span className="text-indigo-400 font-bold">{params.villageCount}</span>
-              </div>
-              <input
-                type="range"
-                min="50"
-                max="300"
-                step="10"
-                value={params.villageCount}
-                onChange={(e) => handleSliderChange('villageCount', parseInt(e.target.value))}
-                className="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500 border border-slate-800"
-              />
-            </div>
-
-            {/* Isolated Outliers Slider */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-400 font-medium">Isolated Outliers (% of Total)</span>
-                <span className="text-rose-400 font-bold">{params.isolatedPercentage}% ({params.isolatedCount})</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="40"
-                step="5"
-                value={params.isolatedPercentage}
-                onChange={(e) => handleSliderChange('isolatedPercentage', parseInt(e.target.value))}
-                className="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500 border border-slate-800"
-              />
-            </div>
-
-            {/* Cluster Radius Slider */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-400 font-medium">Village Cluster Radius</span>
-                <span className="text-indigo-400 font-bold">{params.clusterRadius} u</span>
-              </div>
-              <input
-                type="range"
-                min="3"
-                max="25"
-                step="1"
-                value={params.clusterRadius}
-                onChange={(e) => handleSliderChange('clusterRadius', parseInt(e.target.value))}
-                className="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500 border border-slate-800"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Accordion 4: Settlement Registry */}
+        {/* Accordion 3: Settlement Registry & Archetypes */}
         <div className="border-b border-slate-800 pb-4">
           <button
             type="button"
@@ -622,7 +540,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             className="w-full flex items-center justify-between py-2 text-xs font-bold text-slate-300 hover:text-slate-100 transition-colors uppercase tracking-wider cursor-pointer select-none"
           >
             <span className="flex items-center gap-2">
-              <span className="text-indigo-400 text-sm">🏘️</span> Accordion 4: Settlement Registry
+              <span className="text-indigo-400 text-sm">🏘️</span> Accordion 3: Settlement Registry & Archetypes
             </span>
             <svg
               className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeAccordion === 'registry' ? 'rotate-180' : ''}`}
@@ -645,9 +563,9 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 <button
                   type="button"
                   onClick={onResetVillages}
-                  className="text-[9px] font-bold text-rose-400 bg-rose-950/20 hover:bg-rose-950/40 border border-rose-900/40 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                  className="text-[9px] font-bold text-rose-400 bg-rose-955/20 hover:bg-rose-955/40 border border-rose-900/40 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
                 >
-                  Reset to Defaults
+                  Reset All Settlements to Defaults
                 </button>
               )}
             </div>
@@ -661,7 +579,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                       <span className="text-xs font-bold text-slate-200">{center.name}</span>
                     </div>
                     <span className="text-[10px] text-slate-400 bg-slate-950 px-2 py-0.5 rounded-full border border-slate-850">
-                      {center.headcount} Pupils
+                      {center.headcount} Pupils (North Yorkshire)
                     </span>
                   </div>
 
@@ -689,7 +607,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                             : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-250 hover:bg-slate-900'
                         }`}
                       >
-                        Linear (Ribbon)
+                        Linear
                       </button>
                     </div>
                   </div>
@@ -707,7 +625,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                       step="0.5"
                       value={center.dispersionRadius}
                       onChange={(e) => onUpdateVillage?.(center.id, { dispersionRadius: parseFloat(e.target.value) })}
-                      className="w-full h-1 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500 border border-slate-855"
+                      className="w-full h-1 bg-slate-955 rounded-lg appearance-none cursor-pointer accent-indigo-500 border border-slate-855"
                     />
                   </div>
                 </div>

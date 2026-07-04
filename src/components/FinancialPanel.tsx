@@ -1,155 +1,148 @@
 import React from 'react';
 import type { FinancialReport } from '../utils/generator';
-import type { TransportPolicy } from '../types';
 
 interface FinancialPanelProps {
   financials: FinancialReport;
-  activePolicy: TransportPolicy;
 }
 
-export const FinancialPanel: React.FC<FinancialPanelProps> = ({
-  financials,
-  activePolicy,
-}) => {
-  const isNearest = activePolicy === 'nearest';
-  const hasDeficit = financials.deficit > 0;
+export const FinancialPanel: React.FC<FinancialPanelProps> = ({ financials }) => {
+  const delta = financials.deficit; // nearest - catchment
+
+  const pluralize = (count: number, singular: string, plural: string) => {
+    return `${count} ${count === 1 ? singular : plural}`;
+  };
 
   return (
     <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-xl shadow-xl space-y-4">
-      {/* Title */}
-      <div>
-        <h2 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-          <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Financial Transport Costing
-        </h2>
-        <p className="text-[10px] text-slate-400 mt-0.5">
-          Contrasts daily route contract pricing between policies.
-        </p>
-      </div>
-
-      {/* Cost Displays */}
-      <div className="grid grid-cols-2 gap-3 pt-1">
-        <div className="bg-slate-950/50 border border-slate-900 rounded-xl p-3">
-          <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Catchment Cost</p>
-          <p className="text-lg font-extrabold text-slate-300 mt-0.5">
-            £{financials.catchmentCost}
-            <span className="text-[10px] font-normal text-slate-500"> /day</span>
-          </p>
-          <span className="text-[8px] text-slate-500">Efficient contract base rate</span>
-        </div>
-
-        <div className={`border rounded-xl p-3 transition-colors duration-250 ${
-          isNearest 
-            ? 'bg-indigo-950/20 border-indigo-900/50' 
-            : 'bg-slate-950/50 border-slate-900'
-        }`}>
-          <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Nearest Cost</p>
-          <p className={`text-lg font-extrabold mt-0.5 ${
-            isNearest ? 'text-indigo-400' : 'text-slate-405'
-          }`}>
-            £{financials.nearestCost}
-            <span className="text-[10px] font-normal text-slate-500"> /day</span>
-          </p>
-          <span className="text-[8px] text-slate-500">Subject to route splits</span>
-        </div>
-      </div>
-
-      {/* Active Cost Banner */}
-      <div className="bg-slate-950/70 border border-slate-900/80 rounded-xl p-4 flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-slate-850 pb-3">
         <div>
-          <span className="text-[10px] text-slate-400">Active Daily Allocation Budget:</span>
-          <p className="text-xs font-semibold text-slate-200 mt-0.5 italic">
-            Using {isNearest ? 'Nearest School' : 'Catchment'} Policy
+          <h2 className="text-sm font-extrabold text-slate-200 flex items-center gap-2">
+            <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
+            </svg>
+            Comparative Transport Cost Dashboard
+          </h2>
+          <p className="text-[10px] text-slate-400 mt-0.5">
+            Real-time parallel cost analysis between Catchment boundaries and Euclidean Nearest routing.
           </p>
         </div>
-        <div className="text-right">
-          <span className={`text-xl font-black ${
-            isNearest ? 'text-amber-400' : 'text-emerald-400'
-          }`}>
-            £{financials.activeCost}
-          </span>
-          <span className="text-[10px] text-slate-500 block">per day</span>
-        </div>
+        <span className="text-[10px] text-slate-500 bg-slate-950/80 px-2 py-0.5 rounded-full border border-slate-850 font-bold uppercase tracking-wider">
+          Dual-Policy Engine Active
+        </span>
       </div>
 
-      {/* Active Vehicle Fleet Breakdown */}
-      <div className="space-y-2 pt-1 border-t border-slate-800/40">
-        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-          Active Fleet Breakdown
-        </h3>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="bg-slate-950/45 border border-slate-850 p-2 text-center rounded-xl">
-            <span className="text-xs block">🎫</span>
-            <span className="block text-[8px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Coaches</span>
-            <span className="block text-xs font-extrabold text-indigo-400 mt-0.5">{financials.activeCoaches} active</span>
-          </div>
-          <div className="bg-slate-950/45 border border-slate-850 p-2 text-center rounded-xl">
-            <span className="text-xs block">🚐</span>
-            <span className="block text-[8px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Minibuses</span>
-            <span className="block text-xs font-extrabold text-emerald-450 mt-0.5">{financials.activeMinibuses} active</span>
-          </div>
-          <div className="bg-slate-950/45 border border-slate-850 p-2 text-center rounded-xl">
-            <span className="text-xs block">🚕</span>
-            <span className="block text-[8px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Local Taxis</span>
-            <span className="block text-xs font-extrabold text-rose-400 mt-0.5">{financials.activeTaxis} active</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Deficit Alert Box */}
-      {isNearest && hasDeficit && (
-        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-250 rounded-xl p-3.5 flex items-start gap-2.5 animate-fadeIn">
-          <svg className="w-4 h-4 text-rose-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <div className="text-[10.5px] leading-snug space-y-0.5">
-            <p className="font-bold text-rose-350">
-              Policy Cost Deficit: +£{financials.deficit}/day budget penalty
-            </p>
-            <p className="text-slate-400 text-[10px]">
-              Nearest routing fragments pupil cohorts across boundary lines. These small residual fragments fall below minibus pooling thresholds, forcing high-cost localized taxi routes.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Village Fragmentation split warnings */}
-      {isNearest && (
-        <div className="space-y-2 pt-1 border-t border-slate-800/40">
-          <h3 className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">
-            Cluster Fragmentation Audit
-          </h3>
-          
-          {financials.splits.length > 0 ? (
-            <div className="space-y-1.5">
-              {financials.splits.map((s) => (
-                <div key={s.centerId} className="bg-slate-950/40 border border-slate-900/60 rounded-lg p-2.5 text-[10px] flex items-start justify-between">
-                  <div>
-                    <span className="font-bold text-slate-300">{s.centerName}</span>
-                    <span className="text-slate-500 ml-1.5">({s.totalStudents} total pupils)</span>
-                    <p className="text-rose-400/90 mt-0.5 font-medium leading-normal">
-                      ⚠ {s.fragmentedCount} students split onto high-cost alternative routes
-                    </p>
-                  </div>
-                  <div className="text-right text-[9px] text-slate-555 space-y-0.5">
-                    {s.distribution.map((d) => (
-                      <div key={d.schoolId}>
-                        School {d.schoolId.replace('school-', '').toUpperCase()}: {d.count}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-stretch">
+        {/* Left: Catchment Policy Column (Cols 1-2) */}
+        <div className="md:col-span-2 bg-slate-950/50 border border-slate-900 rounded-xl p-4 flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Catchment Policy</span>
+              <span className="text-[9px] text-slate-500 font-semibold">Polygon boundaries</span>
             </div>
-          ) : (
-            <div className="bg-slate-950/40 border border-slate-900/60 rounded-lg p-2.5 text-[10.5px] text-emerald-400/80 italic text-center font-medium">
-              ✓ No village clusters split. Operational efficiency optimized.
+            <div className="mt-2">
+              <span className="text-2xl font-black text-slate-200">£{financials.catchmentCost}</span>
+              <span className="text-xs font-semibold text-slate-500"> /day</span>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-900/80 space-y-1.5">
+            <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider block">Vehicle Inventory</span>
+            <div className="grid grid-cols-3 gap-1">
+              <div className="bg-slate-900/50 p-1.5 rounded-lg text-center">
+                <span className="text-xs">🚌</span>
+                <span className="block text-[8px] font-bold text-indigo-400 mt-0.5">
+                  {pluralize(financials.catchmentCoaches, 'Coach', 'Coaches')}
+                </span>
+              </div>
+              <div className="bg-slate-900/50 p-1.5 rounded-lg text-center">
+                <span className="text-xs">🚐</span>
+                <span className="block text-[8px] font-bold text-emerald-400 mt-0.5">
+                  {pluralize(financials.catchmentMinibuses, 'Minibus', 'Minibuses')}
+                </span>
+              </div>
+              <div className="bg-slate-900/50 p-1.5 rounded-lg text-center">
+                <span className="text-xs">🚖</span>
+                <span className="block text-[8px] font-bold text-rose-450 mt-0.5">
+                  {pluralize(financials.catchmentTaxis, 'Taxi', 'Taxis')}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Center: Analytical Verdict Banner (Col 3) */}
+        <div className="md:col-span-1 flex items-center justify-center">
+          {delta > 0 && (
+            <div className="bg-amber-955/40 text-amber-400 border border-amber-900/60 rounded-md p-3 text-sm font-medium text-center space-y-1.5 flex flex-col justify-center h-full w-full">
+              <span className="text-base">⚠️</span>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Verdict Inefficient</p>
+              <p className="text-[10.5px] leading-snug font-medium">
+                Moving to Nearest School Approach Inefficient. Proximity-based bisection triggers high-cost localized taxi fragments (Costing +£{delta}/day over Catchment).
+              </p>
+            </div>
+          )}
+
+          {delta === 0 && (
+            <div className="bg-slate-900 text-slate-400 border border-slate-800 rounded-md p-3 text-sm text-center space-y-1.5 flex flex-col justify-center h-full w-full">
+              <span className="text-base">⚖️</span>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Verdict Neutral</p>
+              <p className="text-[10.5px] leading-snug font-medium">
+                Policy Cost Neutral. Spatial distribution yields uniform vehicle deployment configurations across both approaches.
+              </p>
+            </div>
+          )}
+
+          {delta < 0 && (
+            <div className="bg-emerald-955/40 text-emerald-400 border border-emerald-900/60 rounded-md p-3 text-sm font-medium text-center space-y-1.5 flex flex-col justify-center h-full w-full">
+              <span className="text-base">✅</span>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">Verdict Savings</p>
+              <p className="text-[10.5px] leading-snug font-medium">
+                Proximity Realignment Generates Savings. Moving to Nearest School optimizes global routing contracts, saving £{Math.abs(delta)}/day.
+              </p>
             </div>
           )}
         </div>
-      )}
+
+        {/* Right: Nearest School Policy Column (Cols 4-5) */}
+        <div className="md:col-span-2 bg-slate-950/50 border border-slate-900 rounded-xl p-4 flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Nearest School Policy</span>
+              <span className="text-[9px] text-slate-500 font-semibold">Raw Euclidean distance</span>
+            </div>
+            <div className="mt-2">
+              <span className="text-2xl font-black text-slate-200">£{financials.nearestCost}</span>
+              <span className="text-xs font-semibold text-slate-500"> /day</span>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-900/80 space-y-1.5">
+            <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider block">Vehicle Inventory</span>
+            <div className="grid grid-cols-3 gap-1">
+              <div className="bg-slate-900/50 p-1.5 rounded-lg text-center">
+                <span className="text-xs">🚌</span>
+                <span className="block text-[8px] font-bold text-indigo-400 mt-0.5">
+                  {pluralize(financials.nearestCoaches, 'Coach', 'Coaches')}
+                </span>
+              </div>
+              <div className="bg-slate-900/50 p-1.5 rounded-lg text-center">
+                <span className="text-xs">🚐</span>
+                <span className="block text-[8px] font-bold text-emerald-400 mt-0.5">
+                  {pluralize(financials.nearestMinibuses, 'Minibus', 'Minibuses')}
+                </span>
+              </div>
+              <div className="bg-slate-900/50 p-1.5 rounded-lg text-center">
+                <span className="text-xs">🚖</span>
+                <span className="block text-[8px] font-bold text-rose-455 mt-0.5">
+                  {pluralize(financials.nearestTaxis, 'Taxi', 'Taxis')}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

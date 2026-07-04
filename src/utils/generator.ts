@@ -1084,9 +1084,12 @@ export interface FinancialReport {
     fragmentedCount: number;
     distribution: { schoolId: string; count: number }[];
   }[];
-  activeCoaches: number;
-  activeMinibuses: number;
-  activeTaxis: number;
+  catchmentCoaches: number;
+  catchmentMinibuses: number;
+  catchmentTaxis: number;
+  nearestCoaches: number;
+  nearestMinibuses: number;
+  nearestTaxis: number;
 }
 
 /**
@@ -1095,7 +1098,6 @@ export interface FinancialReport {
 export function calculateFinancials(
   households: Household[],
   centers: SettlementCenter[],
-  activePolicy: TransportPolicy,
   schools: School[] = [],
   coachCapacity: number = 50,
   coachThreshold: number = 30,
@@ -1111,14 +1113,9 @@ export function calculateFinancials(
 ): FinancialReport {
   const sortedSchools = [...schools].sort((a, b) => a.x - b.x);
 
-  // Compute assignments for both policies to generate comparison reports
-  const assignedCatchment = activePolicy === 'catchment'
-    ? households
-    : assignHouseholds(households, schools, 'catchment', overlapRule, legacySplit, centers, attractiveness, false);
-
-  const assignedNearest = activePolicy === 'nearest'
-    ? households
-    : assignHouseholds(households, schools, 'nearest', overlapRule, legacySplit, centers, attractiveness, false);
+  // Compute assignments for both policies concurrently using the student dataset
+  const assignedCatchment = assignHouseholds(households, schools, 'catchment', overlapRule, legacySplit, centers, attractiveness, false);
+  const assignedNearest = assignHouseholds(households, schools, 'nearest', overlapRule, legacySplit, centers, attractiveness, false);
 
   const computeVehicleCost = (assignedHouseholds: Household[]) => {
     let totalCost = 0;
@@ -1200,13 +1197,8 @@ export function calculateFinancials(
 
   const catchmentCost = catchmentReport.totalCost;
   const nearestCost = nearestReport.totalCost;
-
-  const activeCost = activePolicy === 'catchment' ? catchmentCost : nearestCost;
-  const deficit = activeCost - catchmentCost;
-
-  const activeCoaches = activePolicy === 'catchment' ? catchmentReport.coachesCount : nearestReport.coachesCount;
-  const activeMinibuses = activePolicy === 'catchment' ? catchmentReport.minibusesCount : nearestReport.minibusesCount;
-  const activeTaxis = activePolicy === 'catchment' ? catchmentReport.taxisCount : nearestReport.taxisCount;
+  const activeCost = catchmentCost; // default active fallback
+  const deficit = nearestCost - catchmentCost;
 
   // Splits list for nearest policy fragmentation audit
   const splits: FinancialReport['splits'] = [];
@@ -1258,9 +1250,12 @@ export function calculateFinancials(
     activeCost,
     deficit,
     splits,
-    activeCoaches,
-    activeMinibuses,
-    activeTaxis,
+    catchmentCoaches: catchmentReport.coachesCount,
+    catchmentMinibuses: catchmentReport.minibusesCount,
+    catchmentTaxis: catchmentReport.taxisCount,
+    nearestCoaches: nearestReport.coachesCount,
+    nearestMinibuses: nearestReport.minibusesCount,
+    nearestTaxis: nearestReport.taxisCount,
   };
 }
 

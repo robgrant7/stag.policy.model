@@ -17,8 +17,8 @@ function App() {
     clusterRadius: 8,
   });
 
-  // 2. Active Transport Policy State
-  const [transportPolicy, setTransportPolicy] = useState<TransportPolicy>('catchment');
+  // 2. Map View Policy State
+  const [mapViewPolicy, setMapViewPolicy] = useState<TransportPolicy>('catchment');
 
   // Overlap Allocation States
   const [overlapRule, setOverlapRule] = useState<'community' | 'legacy_slider'>('community');
@@ -47,12 +47,11 @@ function App() {
   const [centers, setCenters] = useState<SettlementCenter[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
 
-  // 3.5. Reactive Transport Operational Cost calculations
+  // 3.5. Reactive Transport Operational Cost calculations (Parallel Costing)
   const financials = useMemo(() => {
     return calculateFinancials(
       households,
       centers,
-      transportPolicy,
       schools,
       coachCapacity,
       coachThreshold,
@@ -69,7 +68,6 @@ function App() {
   }, [
     households,
     centers,
-    transportPolicy,
     schools,
     coachCapacity,
     coachThreshold,
@@ -84,28 +82,42 @@ function App() {
     attractiveness
   ]);
 
+  // displayedHouseholds drives the map display
+  const displayedHouseholds = useMemo(() => {
+    return assignHouseholds(
+      households,
+      schools,
+      mapViewPolicy,
+      overlapRule,
+      legacySplit,
+      centers,
+      attractiveness,
+      false
+    );
+  }, [households, schools, mapViewPolicy, overlapRule, legacySplit, centers, attractiveness]);
+
   // 4. Scenario generator trigger
   const handleGenerate = (
     currentParams = params,
-    activePolicy = transportPolicy,
     activeOverlapRule = overlapRule,
     activeLegacySplit = legacySplit,
     activeAttractiveness = attractiveness
   ) => {
     const { households: newHouseholds, centers: newCenters, schools: newSchools } = generateScenario(currentParams);
     
-    // Apply assignments to the newly generated households
-    const assigned = assignHouseholds(
+    // Reposition/snap households using Catchment Policy by default
+    const snapped = assignHouseholds(
       newHouseholds,
       newSchools,
-      activePolicy,
+      'catchment',
       activeOverlapRule,
       activeLegacySplit,
       newCenters,
-      activeAttractiveness
+      activeAttractiveness,
+      true
     );
     
-    setHouseholds(assigned);
+    setHouseholds(snapped);
     setCenters(newCenters);
     setSchools(newSchools);
   };
@@ -117,7 +129,6 @@ function App() {
 
   // Sync parameter changes and trigger re-generation if counts change
   const handleChangeParams = (newParams: ScenarioParams) => {
-    // If isolatedPercentage or villageCount changed, recalculate isolatedCount dynamically
     if (
       newParams.isolatedPercentage !== params.isolatedPercentage ||
       newParams.villageCount !== params.villageCount
@@ -129,7 +140,6 @@ function App() {
     
     setParams(newParams);
     
-    // If user changed counts, instantly regenerate to reflect selection
     if (
       newParams.settlementCount !== params.settlementCount ||
       newParams.schoolCount !== params.schoolCount
@@ -138,25 +148,16 @@ function App() {
     }
   };
 
-  // Recalculate assignments on existing points when controls change
-  const handlePolicyChange = (policy: TransportPolicy) => {
-    setTransportPolicy(policy);
-    setHouseholds((prev) => assignHouseholds(prev, schools, policy, overlapRule, legacySplit, centers, attractiveness));
-  };
-
   const handleOverlapRuleChange = (rule: 'community' | 'legacy_slider') => {
     setOverlapRule(rule);
-    setHouseholds((prev) => assignHouseholds(prev, schools, transportPolicy, rule, legacySplit, centers, attractiveness));
   };
 
   const handleLegacySplitChange = (split: { a: number; b: number; c: number }) => {
     setLegacySplit(split);
-    setHouseholds((prev) => assignHouseholds(prev, schools, transportPolicy, overlapRule, split, centers, attractiveness));
   };
 
   const handleAttractivenessChange = (attr: Record<string, number>) => {
     setAttractiveness(attr);
-    setHouseholds((prev) => assignHouseholds(prev, schools, transportPolicy, overlapRule, legacySplit, centers, attr));
   };
 
   const handleUpdateVillage = (villageId: string, fields: Partial<SettlementCenter>) => {
@@ -169,16 +170,17 @@ function App() {
     setCenters(updatedCenters);
 
     const newHouseholds = regenerateHouseholdsForCenters(updatedCenters, params.villageCount, params.isolatedCount, schools);
-    const assigned = assignHouseholds(
+    const snapped = assignHouseholds(
       newHouseholds,
       schools,
-      transportPolicy,
+      'catchment',
       overlapRule,
       legacySplit,
       updatedCenters,
-      attractiveness
+      attractiveness,
+      true
     );
-    setHouseholds(assigned);
+    setHouseholds(snapped);
   };
 
   const handleResetVillages = () => {
@@ -190,16 +192,17 @@ function App() {
     setCenters(updatedCenters);
 
     const newHouseholds = regenerateHouseholdsForCenters(updatedCenters, params.villageCount, params.isolatedCount, schools);
-    const assigned = assignHouseholds(
+    const snapped = assignHouseholds(
       newHouseholds,
       schools,
-      transportPolicy,
+      'catchment',
       overlapRule,
       legacySplit,
       updatedCenters,
-      attractiveness
+      attractiveness,
+      true
     );
-    setHouseholds(assigned);
+    setHouseholds(snapped);
   };
 
   // 5. Export scenario data as JSON
@@ -208,7 +211,7 @@ function App() {
       {
         metadata: {
           generatedAt: new Date().toISOString(),
-          activePolicy: transportPolicy,
+          activePolicy: mapViewPolicy,
           parameters: {
             ...params,
             coachCapacity,
@@ -245,7 +248,7 @@ function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `stag-scenario-${params.schoolCount}-schools-${transportPolicy}-policy.json`;
+    link.download = `stag-scenario-${params.schoolCount}-schools-comparison.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -275,20 +278,18 @@ function App() {
         </div>
 
         {/* Mini stats dashboard inside left panel for better readability and structure */}
-        <StatsOverlay households={households} centers={centers} schools={schools} />
+        <StatsOverlay households={displayedHouseholds} centers={centers} schools={schools} />
 
         <ControlPanel
           params={params}
           onChangeParams={handleChangeParams}
-          transportPolicy={transportPolicy}
-          onPolicyChange={handlePolicyChange}
           overlapRule={overlapRule}
           onOverlapRuleChange={handleOverlapRuleChange}
           legacySplit={legacySplit}
           onLegacySplitChange={handleLegacySplitChange}
           attractiveness={attractiveness}
           onAttractivenessChange={handleAttractivenessChange}
-          onGenerate={() => handleGenerate(params, transportPolicy, overlapRule, legacySplit, attractiveness)}
+          onGenerate={() => handleGenerate(params, overlapRule, legacySplit, attractiveness)}
           onExport={handleExport}
           centers={centers}
           onUpdateVillage={handleUpdateVillage}
@@ -311,23 +312,18 @@ function App() {
           onChangeTaxiCost={setTaxiCost}
         />
 
-        <FinancialPanel
-          financials={financials}
-          activePolicy={transportPolicy}
-        />
-
         {/* Context/Information block */}
         <div className="bg-slate-900/40 border border-slate-800/85 rounded-2xl p-5 text-xs text-slate-400 space-y-3">
           <h3 className="font-bold text-slate-350 uppercase tracking-wider text-[10px]">Policy Comparison Framework</h3>
           <p className="text-[11px] leading-normal text-slate-400">
-            This visual mapping highlights the difference between local optimization policies:
+            This simulator runs parallel cost calculations:
           </p>
           <ul className="list-disc list-inside space-y-1.5 text-slate-450 text-[11px]">
             <li>
-              <strong className="text-indigo-400 font-semibold">Catchment Policy</strong>: Restricts routing to administrative school boundaries. Points falling in the shared <span className="text-purple-400 font-semibold">Overlap Zone</span> are funneled to School A, and fallbacks are triggered for outliers outside both zones.
+              <strong className="text-indigo-400 font-semibold">Catchment Policy</strong>: Restricts routing to administrative school boundaries, funneling overlap zones.
             </li>
             <li>
-              <strong className="text-emerald-400 font-semibold">Nearest Policy</strong>: Disregards boundaries, routing students to their closest destination to minimize transit time.
+              <strong className="text-emerald-400 font-semibold">Nearest Policy</strong>: Disregards boundaries, routing students strictly to their closest destination school.
             </li>
           </ul>
         </div>
@@ -337,13 +333,21 @@ function App() {
         </footer>
       </aside>
 
-      {/* Right Panel (Map Canvas) */}
-      <main className="w-2/3 h-full flex items-center justify-center p-6 bg-slate-900 overflow-hidden">
-        <GridCanvas
-          households={households}
-          centers={centers}
-          schools={schools}
-          clusterRadius={params.clusterRadius}
+      {/* Right Panel (Map Canvas + Side-by-side Comparison Dashboard) */}
+      <main className="w-2/3 h-full flex flex-col p-6 bg-slate-900 overflow-hidden gap-6 min-w-0">
+        <div className="flex-1 min-h-0 min-w-0">
+          <GridCanvas
+            households={displayedHouseholds}
+            centers={centers}
+            schools={schools}
+            clusterRadius={params.clusterRadius}
+            mapViewPolicy={mapViewPolicy}
+            onMapViewPolicyChange={setMapViewPolicy}
+          />
+        </div>
+
+        <FinancialPanel
+          financials={financials}
         />
       </main>
     </div>

@@ -7,6 +7,8 @@ interface GridCanvasProps {
   centers: SettlementCenter[];
   schools: School[];
   clusterRadius: number;
+  mapViewPolicy: 'catchment' | 'nearest';
+  onMapViewPolicyChange: (policy: 'catchment' | 'nearest') => void;
 }
 
 export const GridCanvas: React.FC<GridCanvasProps> = ({
@@ -14,6 +16,8 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
   centers,
   schools,
   clusterRadius,
+  mapViewPolicy,
+  onMapViewPolicyChange,
 }) => {
   const [hoveredPoint, setHoveredPoint] = useState<Household | SettlementCenter | School | null>(null);
   const [filterType, setFilterType] = useState<string>('all');
@@ -69,9 +73,36 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
             </svg>
             Spatial Map Grid
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            100x100 geographic space. Irregular shapes represent school catchment polygons.
-          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-0.5">
+            <p className="text-xs text-slate-400">
+              100x100 geographic space. Fills show school catchments.
+            </p>
+            <span className="text-slate-700 hidden sm:inline">•</span>
+            <div className="flex items-center gap-0.5 bg-slate-950 p-0.5 rounded-lg border border-slate-800/80">
+              <button
+                type="button"
+                onClick={() => onMapViewPolicyChange('catchment')}
+                className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all duration-150 cursor-pointer ${
+                  mapViewPolicy === 'catchment'
+                    ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-500 hover:text-slate-350'
+                }`}
+              >
+                Catchment View
+              </button>
+              <button
+                type="button"
+                onClick={() => onMapViewPolicyChange('nearest')}
+                className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all duration-150 cursor-pointer ${
+                  mapViewPolicy === 'nearest'
+                    ? 'bg-emerald-650 text-white shadow-sm font-extrabold'
+                    : 'text-slate-500 hover:text-slate-350'
+                }`}
+              >
+                Nearest View
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Legend / Quick Filter */}
@@ -307,9 +338,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
 
               {/* 3. Fine Student-to-School Leader Lines (Clutter-Free Links) */}
               {(() => {
-                const activeSchoolId = (hoveredPoint && 'polygon' in hoveredPoint)
-                  ? hoveredPoint.id
-                  : (filterType.startsWith('school-') ? filterType : null);
+                const activeSchoolId = filterType.startsWith('school-') ? filterType : null;
 
                 if (!activeSchoolId) return null;
 
@@ -324,7 +353,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                       y1={100 - h.y}
                       x2={school.x}
                       y2={100 - school.y}
-                      stroke="#64748b"
+                      stroke={school.color}
                       strokeWidth="0.5"
                       opacity={0.15}
                       className="transition-all duration-300 pointer-events-none"
