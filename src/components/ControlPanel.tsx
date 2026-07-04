@@ -469,7 +469,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 {overlapRule === 'legacy_slider' && params.schoolCount === 2 && (
                   <div className="space-y-2 pt-1 bg-slate-950/40 border border-slate-855 p-4 rounded-xl">
                     <div className="flex justify-between text-[10px]">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider flex items-center">Parent Choice Split (A vs B)<Tooltip text="The historical percentage division of student choice between School A and School B." /></span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider flex items-center">Parent Choice Split (A vs B)<Tooltip text="The historical percentage division of student choice between School A and School B. This allows some schools to become more attractive within a catchment, which reflects real life." /></span>
                       <span className="text-protest-yellow font-extrabold">{legacySplit.a}% / {100 - legacySplit.a}%</span>
                     </div>
                     <input
@@ -494,7 +494,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 {overlapRule === 'legacy_slider' && params.schoolCount >= 3 && (
                   <div className="space-y-4 pt-1 bg-slate-950/40 border border-slate-855 p-4 rounded-xl">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-350 uppercase tracking-wider">Attractiveness Sliders</span>
+                      <span className="text-xs font-bold text-slate-350 uppercase tracking-wider flex items-center">School Attractiveness<Tooltip text="Extra pull factor representing school popularity or quality. This allows some schools to become more attractive within a catchment, which reflects real life." /></span>
                       <span className="text-[10px] text-protest-yellow font-bold bg-protest-yellow/10 px-2 py-0.5 rounded-full border border-protest-yellow/20">
                         Parent Preference
                       </span>

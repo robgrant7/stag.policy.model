@@ -524,7 +524,7 @@ function App() {
                     <ul className="list-disc list-inside space-y-1 pl-4 mt-1">
                       <li>Under the <strong>Nearest Policy</strong>, every house goes to its closest school.</li>
                       <li>
-                        Under the <strong>Catchment Policy</strong>, houses inside overlapping boundaries are assigned based on choice. The **Feeder Settlement Unity** rule keeps villages together by routing the whole village to the school closest to its center. The **Legacy Preference** rule splits the village using a ratio slider.
+                        Under the <strong>Catchment Policy</strong>, houses inside overlapping boundaries are assigned based on choice. The **Feeder Settlement Unity** rule keeps villages together by routing the whole village to the school closest to its center. The **Legacy Preference** rule splits the village using a ratio slider. This allows some schools to become more "attractive" within a catchment, which reflects real life.
                       </li>
                     </ul>
                   </li>
