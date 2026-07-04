@@ -25,10 +25,10 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
 
   const diagnostics = useMemo(() => {
     const testPoints = [
-      { name: 'Bottom-Left (0,0)', x: 0.1, y: 0.1 },
-      { name: 'Bottom-Right (100,0)', x: 99.9, y: 0.1 },
-      { name: 'Top-Left (0,100)', x: 0.1, y: 99.9 },
-      { name: 'Top-Right (100,100)', x: 99.9, y: 99.9 },
+      { name: 'Bottom-Left (0,0)', x: 0.5, y: 0.5 },
+      { name: 'Bottom-Right (500,0)', x: 499.5, y: 0.5 },
+      { name: 'Top-Left (0,500)', x: 0.5, y: 499.5 },
+      { name: 'Top-Right (500,500)', x: 499.5, y: 499.5 },
     ];
     const uncoveredCorners = testPoints.filter(
       (pt) => !schools.some((school) => isPointInSchoolCatchment(pt, school))
@@ -277,7 +277,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
           >
             <defs>
               <clipPath id="grid-clip">
-                <rect width="100" height="100" x="0" y="0" />
+                <rect width="500" height="500" x="0" y="0" />
               </clipPath>
             </defs>
 
