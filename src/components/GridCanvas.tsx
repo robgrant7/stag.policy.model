@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Household, SettlementCenter, School } from '../types';
+import { isPointInSchoolCatchment } from '../utils/generator';
 
 interface GridCanvasProps {
   households: Household[];
@@ -17,6 +18,24 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
   const [hoveredPoint, setHoveredPoint] = useState<Household | SettlementCenter | School | null>(null);
   const [filterType, setFilterType] = useState<string>('all');
   const [selectedSettlementFilter, setSelectedSettlementFilter] = useState<string | null>(null);
+
+  const diagnostics = useMemo(() => {
+    const testPoints = [
+      { name: 'Bottom-Left (0,0)', x: 0, y: 0 },
+      { name: 'Bottom-Right (100,0)', x: 100, y: 0 },
+      { name: 'Top-Left (0,100)', x: 0, y: 100 },
+      { name: 'Top-Right (100,100)', x: 100, y: 100 },
+    ];
+    const uncoveredCorners = testPoints.filter(
+      (pt) => !schools.some((school) => isPointInSchoolCatchment(pt, school))
+    ).map((pt) => pt.name);
+
+    return {
+      uncoveredCorners,
+      isClean: uncoveredCorners.length === 0,
+      schoolCount: schools.length,
+    };
+  }, [schools]);
 
   // Filter households based on legend clicks
   const filteredHouseholds = households.filter((h) => {
@@ -152,8 +171,20 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
               })()}
             </div>
           ) : (
-            <div className="text-slate-500 italic text-[10px]">
-              Hover over pins or dots to inspect...
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="text-slate-500 italic text-[10px]">
+                Hover over pins or dots to inspect...
+              </div>
+              {!diagnostics.isClean && (
+                <div className="text-rose-400 font-semibold text-[10px] px-2 py-0.5 rounded border border-rose-950/40 bg-rose-950/10 animate-pulse">
+                  ⚠️ Catchment Gap at {diagnostics.uncoveredCorners.join(', ')}! Please Hard Reload (Ctrl+F5)
+                </div>
+              )}
+              {diagnostics.schoolCount > 3 && (
+                <div className="text-amber-400 font-semibold text-[10px] px-2 py-0.5 rounded border border-amber-950/40 bg-amber-950/10">
+                  ⚠️ Active Schools: {diagnostics.schoolCount} (Maximum 3 recommended). Please Hard Reload
+                </div>
+              )}
             </div>
           )}
         </div>

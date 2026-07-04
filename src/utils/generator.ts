@@ -982,6 +982,10 @@ export function generateScenario(params: ScenarioParams): {
   // Run the strict catchment inclusion fail-safe
   ensureSettlementInclusion(schools, centers);
 
+  schools.forEach((school) => {
+    console.log(`[CLIENT-SIDE] School ${school.id} (${school.name}) polygons:`, JSON.stringify(school.polygons));
+  });
+
   return {
     households,
     centers,
