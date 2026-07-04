@@ -34,13 +34,13 @@ function App() {
   
   // Vehicle Parameter States
   const [coachCapacity, setCoachCapacity] = useState<number>(50);
-  const [coachThreshold, setCoachThreshold] = useState<number>(30);
-  const [coachCost, setCoachCost] = useState<number>(300);
+  const [coachThreshold, setCoachThreshold] = useState<number>(17);
+  const [coachCost, setCoachCost] = useState<number>(500);
   const [minibusCapacity, setMinibusCapacity] = useState<number>(16);
   const [minibusThreshold, setMinibusThreshold] = useState<number>(8);
-  const [minibusCost, setMinibusCost] = useState<number>(120);
-  const [taxiCapacity, setTaxiCapacity] = useState<number>(4);
-  const [taxiCost, setTaxiCost] = useState<number>(50);
+  const [minibusCost, setMinibusCost] = useState<number>(250);
+  const [taxiCapacity, setTaxiCapacity] = useState<number>(2);
+  const [taxiCost, setTaxiCost] = useState<number>(150);
 
   // 3. Scenario Data State
   const [households, setHouseholds] = useState<Household[]>([]);

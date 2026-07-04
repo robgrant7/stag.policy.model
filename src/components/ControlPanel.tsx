@@ -166,9 +166,9 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 </div>
                 <input
                   type="range"
-                  min="20"
-                  max="100"
-                  step="5"
+                  min="50"
+                  max="300"
+                  step="10"
                   value={taxiCost}
                   onChange={(e) => onChangeTaxiCost(parseInt(e.target.value))}
                   className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-rose-500 border border-slate-855"
@@ -221,9 +221,9 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 </div>
                 <input
                   type="range"
-                  min="60"
-                  max="200"
-                  step="5"
+                  min="100"
+                  max="400"
+                  step="10"
                   value={minibusCost}
                   onChange={(e) => onChangeMinibusCost(parseInt(e.target.value))}
                   className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-emerald-500 border border-slate-855"
@@ -260,9 +260,9 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 </div>
                 <input
                   type="range"
-                  min="20"
-                  max="50"
-                  step="5"
+                  min="10"
+                  max="40"
+                  step="1"
                   value={coachThreshold}
                   onChange={(e) => onChangeCoachThreshold(parseInt(e.target.value))}
                   className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-indigo-500 border border-slate-855"
@@ -276,9 +276,9 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 </div>
                 <input
                   type="range"
-                  min="150"
-                  max="500"
-                  step="10"
+                  min="200"
+                  max="800"
+                  step="20"
                   value={coachCost}
                   onChange={(e) => onChangeCoachCost(parseInt(e.target.value))}
                   className="w-full h-1 bg-slate-900 rounded appearance-none cursor-pointer accent-indigo-500 border border-slate-855"
