@@ -185,7 +185,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
                   {'polygon' in hoveredPoint
                     ? 'School Landmark'
                     : 'color' in hoveredPoint
-                    ? 'Settlement Center'
+                    ? 'Village Center'
                     : `${hoveredPoint.type} household`}
                 </span>
               </div>
@@ -545,7 +545,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
 
         {/* Row 2: Settlements Legend */}
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs border-t border-slate-850 pt-2">
-          <span className="text-slate-500 font-semibold uppercase tracking-wider text-[10px] self-center">Settlements:</span>
+          <span className="text-slate-500 font-semibold uppercase tracking-wider text-[10px] self-center">Villages:</span>
           {centers.map((center) => {
             const isFilterActive = selectedSettlementFilter === center.id;
             return (

@@ -142,7 +142,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             className="w-full flex items-center justify-between py-2 text-slate-300 hover:text-white transition-colors cursor-pointer select-none"
           >
             <span className="flex items-center gap-2 font-heading tracking-wider text-base uppercase">
-              <span className="text-protest-yellow text-sm">🚌</span> Accordion 1: Vehicle Fleet Tiers
+              <span className="text-protest-yellow text-sm">🚌</span> 1. Bus & Taxi Cost Settings
             </span>
             <svg
               className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeAccordion === 'vehicles' ? 'rotate-180' : ''}`}
@@ -167,7 +167,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               {/* Capacity */}
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-455 font-medium">Taxi Capacity</span>
+                  <span className="text-slate-455 font-medium flex items-center">Taxi Capacity<Tooltip text="The maximum number of students who can share one taxi." /></span>
                   <span className="text-rose-400 font-bold">{taxiCapacity} pupils</span>
                 </div>
                 <input
@@ -183,7 +183,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               {/* Cost */}
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-455 font-medium">Taxi Daily Rate (Point-to-Point)</span>
+                  <span className="text-slate-455 font-medium flex items-center">Taxi Daily Rate<Tooltip text="The daily contract cost for renting a taxi for isolated/remote students." /></span>
                   <span className="text-rose-400 font-bold">£{taxiCost}/day</span>
                 </div>
                 <input
@@ -206,7 +206,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               {/* Capacity */}
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-455 font-medium">Minibus Capacity</span>
+                  <span className="text-slate-455 font-medium flex items-center">Minibus Capacity<Tooltip text="The maximum number of students who can share one minibus." /></span>
                   <span className="text-emerald-400 font-bold">{minibusCapacity} pupils</span>
                 </div>
                 <input
@@ -222,7 +222,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               {/* Threshold */}
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-455 font-medium">Minibus Min Threshold</span>
+                  <span className="text-slate-455 font-medium flex items-center">Minibus Student Threshold<Tooltip text="The minimum number of students heading to the same school needed to upgrade from taxis to a minibus." /></span>
                   <span className="text-emerald-400 font-bold">{minibusThreshold} pupils</span>
                 </div>
                 <input
@@ -238,7 +238,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               {/* Cost */}
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-455 font-medium">Minibus Daily Rate</span>
+                  <span className="text-slate-455 font-medium flex items-center">Minibus Daily Rate<Tooltip text="The standard daily contract cost for renting a minibus." /></span>
                   <span className="text-emerald-400 font-bold">£{minibusCost}/day</span>
                 </div>
                 <input
@@ -261,7 +261,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               {/* Capacity */}
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-455 font-medium">Coach Capacity</span>
+                  <span className="text-slate-455 font-medium flex items-center">Coach Capacity<Tooltip text="The maximum number of students who can share one coach." /></span>
                   <span className="text-protest-yellow font-bold">{coachCapacity} pupils</span>
                 </div>
                 <input
@@ -277,7 +277,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               {/* Threshold */}
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-455 font-medium">Coach Min Threshold</span>
+                  <span className="text-slate-455 font-medium flex items-center">Coach Student Threshold<Tooltip text="The minimum number of students heading to the same school needed to hire a full-sized coach." /></span>
                   <span className="text-protest-yellow font-bold">{coachThreshold} pupils</span>
                 </div>
                 <input
@@ -293,7 +293,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               {/* Cost */}
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-455 font-medium">Coach Daily Rate</span>
+                  <span className="text-slate-455 font-medium flex items-center">Coach Daily Rate<Tooltip text="The standard daily contract cost for renting a full-sized coach." /></span>
                   <span className="text-protest-yellow font-bold">£{coachCost}/day</span>
                 </div>
                 <input
@@ -318,7 +318,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             className="w-full flex items-center justify-between py-2 text-slate-300 hover:text-white transition-colors cursor-pointer select-none"
           >
             <span className="flex items-center gap-2 font-heading tracking-wider text-base uppercase">
-              <span className="text-protest-yellow text-sm">📊</span> Accordion 2: Scenario Density Controls
+              <span className="text-protest-yellow text-sm">📊</span> 2. Village & School Setup
             </span>
             <svg
               className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeAccordion === 'density' ? 'rotate-180' : ''}`}
@@ -382,7 +382,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             {/* Village Households Slider */}
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-405 font-medium">Village Households</span>
+                <span className="text-slate-405 font-medium flex items-center">Households per Village<Tooltip text="The number of family homes built inside each village cluster." /></span>
                 <span className="text-protest-yellow font-bold">{params.villageCount}</span>
               </div>
               <input
@@ -399,7 +399,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             {/* Isolated Outliers Slider */}
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-405 font-medium">Isolated Outliers (% of Total)</span>
+                <span className="text-slate-405 font-medium flex items-center">Remote Outlier Homes (%)<Tooltip text="The percentage of families living in remote houses far away from village groups who require direct taxi routes." /></span>
                 <span className="text-rose-455 font-bold">{params.isolatedPercentage}% ({params.isolatedCount})</span>
               </div>
               <input
@@ -416,7 +416,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             {/* Cluster Radius Slider */}
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-405 font-medium">Village Cluster Radius</span>
+                <span className="text-slate-405 font-medium flex items-center">Village Radius Size<Tooltip text="How spread out or tight the houses are within each village." /></span>
                 <span className="text-protest-yellow font-bold">{params.clusterRadius} u</span>
               </div>
               <input
@@ -554,7 +554,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             className="w-full flex items-center justify-between py-2 text-slate-300 hover:text-white transition-colors cursor-pointer select-none"
           >
             <span className="flex items-center gap-2 font-heading tracking-wider text-base uppercase">
-              <span className="text-protest-yellow text-sm">🏘️</span> Accordion 3: Settlement Registry & Archetypes
+              <span className="text-protest-yellow text-sm">🏘️</span> 3. Custom Village Layouts
             </span>
             <svg
               className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeAccordion === 'registry' ? 'rotate-180' : ''}`}
@@ -572,7 +572,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Settlements</span>
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Villages List</span>
               {onResetVillages && (
                 <button
                   type="button"
@@ -593,13 +593,13 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                       <span className="text-xs font-bold text-slate-200">{center.name}</span>
                     </div>
                     <span className="text-[10px] text-slate-400 bg-slate-950 px-2 py-0.5 rounded-full border border-slate-850">
-                      {center.headcount} Pupils (North Yorkshire)
+                      {center.headcount} Pupils
                     </span>
                   </div>
 
                   {/* Archetype Toggle Button Group */}
                   <div className="space-y-1">
-                    <span className="text-[9px] text-slate-450 uppercase tracking-wider font-semibold">Layout Archetype</span>
+                    <span className="text-[9px] text-slate-450 uppercase tracking-wider font-semibold flex items-center">Village Layout<Tooltip text="Choose Clustered (grouped in circles) or Roadside (spread along a single road)." /></span>
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
@@ -656,7 +656,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             className="w-full flex items-center justify-between py-2 text-slate-300 hover:text-white transition-colors cursor-pointer select-none"
           >
             <span className="flex items-center gap-2 font-heading tracking-wider text-base uppercase">
-              <span className="text-protest-yellow text-sm">🧪</span> Accordion 4: Bulk Simulation Run
+              <span className="text-protest-yellow text-sm">🧪</span> 4. Test Many Scenarios (Bulk Run)
             </span>
             <svg
               className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeAccordion === 'bulk' ? 'rotate-180' : ''}`}

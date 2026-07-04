@@ -387,13 +387,13 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
             {/* 3.1. Settlement Density influence */}
             <div className="bg-slate-950/40 border border-slate-850 rounded-xl p-5 space-y-4">
               <div>
-                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Performance by Settlement Density</h4>
-                <p className="text-[10px] text-slate-500 mt-0.5">Correlation between settlement nodes count and policy winner.</p>
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Outcome by Village Count</h4>
+                <p className="text-[10px] text-slate-500 mt-0.5">How the number of villages generated affects which policy is cheaper.</p>
               </div>
 
               <div className="space-y-4">
                 {Object.entries(stats.densityStats).map(([tier, data]) => {
-                  const label = tier === 'low' ? 'Low Density (1-4 clusters)' : tier === 'med' ? 'Medium Density (5-8 clusters)' : 'High Density (9-12 clusters)';
+                  const label = tier === 'low' ? 'Few Villages (1-4)' : tier === 'med' ? 'Some Villages (5-8)' : 'Many Villages (9-12)';
                   const total = data.total || 1;
                   const cPct = Math.round((data.catchmentWins / total) * 100);
                   const tPct = Math.round((data.tieWins / total) * 100);
@@ -461,13 +461,13 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
             {/* 3.3. Overlap Allocation rule influence */}
             <div className="bg-slate-950/40 border border-slate-850 rounded-xl p-5 space-y-4">
               <div>
-                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Performance by Overlap Rule</h4>
-                <p className="text-[10px] text-slate-500 mt-0.5">Correlation between assignment rule type and policy winner.</p>
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Outcome by Overlap Rule</h4>
+                <p className="text-[10px] text-slate-500 mt-0.5">How different village assignment rules affect which policy is cheaper.</p>
               </div>
 
               <div className="space-y-4">
                 {Object.entries(stats.overlapStats).map(([rule, data]) => {
-                  const label = rule === 'community' ? 'Community Unity Rule (Unified Villages)' : 'Legacy Preference Slider Split';
+                  const label = rule === 'community' ? 'Keep Villages Together (Community Rule)' : 'Split Villages (Parent Choice Rule)';
                   const total = data.total || 1;
                   const cPct = Math.round((data.catchmentWins / total) * 100);
                   const tPct = Math.round((data.tieWins / total) * 100);
