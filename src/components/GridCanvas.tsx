@@ -21,10 +21,10 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
 
   const diagnostics = useMemo(() => {
     const testPoints = [
-      { name: 'Bottom-Left (0,0)', x: 0, y: 0 },
-      { name: 'Bottom-Right (100,0)', x: 100, y: 0 },
-      { name: 'Top-Left (0,100)', x: 0, y: 100 },
-      { name: 'Top-Right (100,100)', x: 100, y: 100 },
+      { name: 'Bottom-Left (0,0)', x: 0.1, y: 0.1 },
+      { name: 'Bottom-Right (100,0)', x: 99.9, y: 0.1 },
+      { name: 'Top-Left (0,100)', x: 0.1, y: 99.9 },
+      { name: 'Top-Right (100,100)', x: 99.9, y: 99.9 },
     ];
     const uncoveredCorners = testPoints.filter(
       (pt) => !schools.some((school) => isPointInSchoolCatchment(pt, school))
@@ -242,7 +242,7 @@ export const GridCanvas: React.FC<GridCanvasProps> = ({
           <svg
             className="absolute inset-0 w-full h-full pointer-events-none z-10"
             viewBox="0 0 100 100"
-            preserveAspectRatio="xMidYMid meet"
+            preserveAspectRatio="none"
           >
             <defs>
               <clipPath id="grid-clip">
