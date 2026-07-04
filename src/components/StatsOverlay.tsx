@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Household, SettlementCenter, School } from '../types';
-import { isPointInPolygon } from '../utils/generator';
+import { isPointInSchoolCatchment } from '../utils/generator';
 
 interface StatsOverlayProps {
   households: Household[];
@@ -22,8 +22,8 @@ export const StatsOverlay: React.FC<StatsOverlayProps> = ({ households, schools 
 
   if (schoolA && schoolB) {
     households.forEach((h) => {
-      const inA = isPointInPolygon(h, schoolA.polygon);
-      const inB = isPointInPolygon(h, schoolB.polygon);
+      const inA = isPointInSchoolCatchment(h, schoolA);
+      const inB = isPointInSchoolCatchment(h, schoolB);
       if (inA && inB) {
         overlapCount++;
       }

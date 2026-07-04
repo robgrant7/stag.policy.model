@@ -346,10 +346,17 @@ export function getExclusiveSchoolId(px: number, schools: School[]): string {
   }
 }
 
+export function isPointInSchoolCatchment(point: { x: number; y: number }, school: School): boolean {
+  if (school.polygons && school.polygons.length > 0) {
+    return school.polygons.some((poly) => isPointInPolygon(point, poly));
+  }
+  return isPointInPolygon(point, school.polygon);
+}
+
 export function getEligibleSchoolsForPoint(point: { x: number; y: number }, schools: School[]): string[] {
   const eligible: string[] = [];
   schools.forEach((school) => {
-    if (isPointInPolygon(point, school.polygon)) {
+    if (isPointInSchoolCatchment(point, school)) {
       eligible.push(school.id);
     }
   });
@@ -570,9 +577,9 @@ export function getVoronoiCellForCenter(center: SettlementCenter, allCenters: Se
   return cell;
 }
 
-export function mergePolygons(polys: Point[][]): Point[] {
+export function mergePolygons(polys: Point[][]): Point[][] {
   if (polys.length === 0) return [];
-  if (polys.length === 1) return polys[0];
+  if (polys.length === 1) return [polys[0]];
 
   interface Edge { p1: Point; p2: Point; }
   const edges: Edge[] = [];
@@ -591,49 +598,75 @@ export function mergePolygons(polys: Point[][]): Point[] {
 
   if (boundaryEdges.length === 0) return [];
 
-  const result: Point[] = [];
-  let currentEdge = boundaryEdges[0];
-  result.push(currentEdge.p1);
-  
-  const visited = new Set<number>([0]);
+  const loops: Point[][] = [];
+  const visitedEdges = new Set<number>();
 
-  for (let step = 0; step < boundaryEdges.length; step++) {
-    result.push(currentEdge.p2);
-    let nextIdx = -1;
+  while (visitedEdges.size < boundaryEdges.length) {
+    let startIdx = -1;
     for (let i = 0; i < boundaryEdges.length; i++) {
-      if (!visited.has(i) && ptsEqual(boundaryEdges[i].p1, currentEdge.p2)) {
-        nextIdx = i;
+      if (!visitedEdges.has(i)) {
+        startIdx = i;
         break;
       }
     }
-    if (nextIdx === -1) {
-      let minDist = Infinity;
+    if (startIdx === -1) break;
+
+    const currentLoop: Point[] = [];
+    let currentEdge = boundaryEdges[startIdx];
+    currentLoop.push(currentEdge.p1);
+    visitedEdges.add(startIdx);
+
+    let maxSteps = boundaryEdges.length * 2;
+    let steps = 0;
+    while (steps < maxSteps) {
+      steps++;
+      currentLoop.push(currentEdge.p2);
+      
+      if (ptsEqual(currentEdge.p2, currentLoop[0])) {
+        break;
+      }
+
+      let nextIdx = -1;
       for (let i = 0; i < boundaryEdges.length; i++) {
-        if (!visited.has(i)) {
-          const d = getDistance(boundaryEdges[i].p1.x, boundaryEdges[i].p1.y, currentEdge.p2.x, currentEdge.p2.y);
-          if (d < minDist) {
-            minDist = d;
-            nextIdx = i;
+        if (!visitedEdges.has(i) && ptsEqual(boundaryEdges[i].p1, currentEdge.p2)) {
+          nextIdx = i;
+          break;
+        }
+      }
+      
+      if (nextIdx === -1) {
+        let minDist = Infinity;
+        for (let i = 0; i < boundaryEdges.length; i++) {
+          if (!visitedEdges.has(i)) {
+            const d = getDistance(boundaryEdges[i].p1.x, boundaryEdges[i].p1.y, currentEdge.p2.x, currentEdge.p2.y);
+            if (d < minDist) {
+              minDist = d;
+              nextIdx = i;
+            }
           }
         }
       }
+
+      if (nextIdx === -1) break;
+      visitedEdges.add(nextIdx);
+      currentEdge = boundaryEdges[nextIdx];
     }
-    if (nextIdx === -1) break;
-    visited.add(nextIdx);
-    currentEdge = boundaryEdges[nextIdx];
+
+    const cleanLoop: Point[] = [];
+    currentLoop.forEach((pt) => {
+      if (cleanLoop.length === 0 || !ptsEqual(cleanLoop[cleanLoop.length - 1], pt)) {
+        cleanLoop.push(pt);
+      }
+    });
+    if (cleanLoop.length > 1 && ptsEqual(cleanLoop[0], cleanLoop[cleanLoop.length - 1])) {
+      cleanLoop.pop();
+    }
+    if (cleanLoop.length >= 3) {
+      loops.push(cleanLoop);
+    }
   }
 
-  const cleanResult: Point[] = [];
-  result.forEach((pt) => {
-    if (cleanResult.length === 0 || !ptsEqual(cleanResult[cleanResult.length - 1], pt)) {
-      cleanResult.push(pt);
-    }
-  });
-  if (cleanResult.length > 1 && ptsEqual(cleanResult[0], cleanResult[cleanResult.length - 1])) {
-    cleanResult.pop();
-  }
-
-  return cleanResult;
+  return loops;
 }
 
 /**
@@ -641,12 +674,7 @@ export function mergePolygons(polys: Point[][]): Point[] {
  */
 export function ensureSettlementInclusion(schools: School[], centers: SettlementCenter[]) {
   centers.forEach((center) => {
-    const isInside = schools.some((school) => {
-      if (school.polygons && school.polygons.length > 0) {
-        return school.polygons.some((poly) => isPointInPolygon(center, poly));
-      }
-      return isPointInPolygon(center, school.polygon);
-    });
+    const isInside = schools.some((school) => isPointInSchoolCatchment(center, school));
     
     if (!isInside) {
       let nearestSchool = schools[0];
@@ -916,10 +944,10 @@ export function generateScenario(params: ScenarioParams): {
     return poly.map((p) => {
       let x = p.x;
       let y = p.y;
-      if (minX <= 15.0 && x <= 15.0) x = 0;
-      if (maxX >= 85.0 && x >= 85.0) x = 100;
-      if (minY <= 15.0 && y <= 15.0) y = 0;
-      if (maxY >= 85.0 && y >= 85.0) y = 100;
+      if (minX <= 30.0 && x <= 30.0) x = 0;
+      if (maxX >= 70.0 && x >= 70.0) x = 100;
+      if (minY <= 30.0 && y <= 30.0) y = 0;
+      if (maxY >= 70.0 && y >= 70.0) y = 100;
       return { x, y };
     });
   }
@@ -930,9 +958,9 @@ export function generateScenario(params: ScenarioParams): {
     const baseCells = assignedCenters.map((c) => getVoronoiCellForCenter(c, centers));
 
     if (baseCells.length > 0) {
-      const merged = mergePolygons(baseCells);
-      school.polygon = snapToPerimeter(merged);
-      school.polygons = [school.polygon];
+      const mergedPolys = mergePolygons(baseCells);
+      school.polygons = mergedPolys.map((poly) => snapToPerimeter(poly));
+      school.polygon = school.polygons[0] || [];
     } else {
       // Fallback: simple polygon around the school center if somehow empty
       const rad = 25.0;
