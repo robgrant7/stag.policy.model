@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import type { BulkRunResult } from '../types';
 
 interface BulkReportModalProps {
@@ -12,12 +12,7 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
   onClose,
   onLoadRun,
 }) => {
-  const [filterWinner, setFilterWinner] = useState<'all' | 'catchment' | 'nearest' | 'tie'>('all');
-  const [sortField, setSortField] = useState<'runId' | 'deficit' | 'catchmentCost' | 'nearestCost'>('runId');
-  const [sortAsc, setSortAsc] = useState<boolean>(true);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-
-  // 1. Calculate General Aggregates
+  // 1. Calculate General Aggregates and Distribution Statistics
   const stats = useMemo(() => {
     if (runs.length === 0) return null;
 
@@ -38,6 +33,33 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
     let maxCatchmentSavings = 0;
     let maxNearestSavings = 0;
 
+    // 1.1. Deficit Distribution Histogram Buckets
+    let deltaSigCatchment = 0; // < -200
+    let deltaModCatchment = 0; // -200 to -50
+    let deltaNeutral = 0;      // -50 to 50
+    let deltaModNearest = 0;   // 50 to 200
+    let deltaSigNearest = 0;   // > 200
+
+    // 1.2. Settlement Density Tiers
+    const densityStats = {
+      low: { catchmentWins: 0, tieWins: 0, nearestWins: 0, total: 0 },  // 1-4
+      med: { catchmentWins: 0, tieWins: 0, nearestWins: 0, total: 0 },  // 5-8
+      high: { catchmentWins: 0, tieWins: 0, nearestWins: 0, total: 0 }, // 9-12
+    };
+
+    // 1.3. School Count Tiers
+    const schoolStats = {
+      few: { catchmentWins: 0, tieWins: 0, nearestWins: 0, total: 0 },  // 1-2
+      some: { catchmentWins: 0, tieWins: 0, nearestWins: 0, total: 0 }, // 3-4
+      many: { catchmentWins: 0, tieWins: 0, nearestWins: 0, total: 0 }, // 5-6
+    };
+
+    // 1.4. Overlap Rules Tiers
+    const overlapStats = {
+      community: { catchmentWins: 0, tieWins: 0, nearestWins: 0, total: 0 },
+      legacy_slider: { catchmentWins: 0, tieWins: 0, nearestWins: 0, total: 0 },
+    };
+
     runs.forEach((r) => {
       catchmentCostSum += r.metrics.catchmentCost;
       nearestCostSum += r.metrics.nearestCost;
@@ -51,18 +73,65 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
       nearestTaxisSum += r.metrics.nearestTaxis;
 
       const diff = r.metrics.deficit; // catchmentCost - nearestCost
-      if (diff < 0) {
+      
+      // Cost Margin Buckets
+      if (diff < -200) {
+        deltaSigCatchment++;
         catchmentCheaperCount++;
         const savings = Math.abs(diff);
         if (savings > maxCatchmentSavings) maxCatchmentSavings = savings;
-      } else if (diff > 0) {
+      } else if (diff < -50) {
+        deltaModCatchment++;
+        catchmentCheaperCount++;
+        const savings = Math.abs(diff);
+        if (savings > maxCatchmentSavings) maxCatchmentSavings = savings;
+      } else if (diff <= 50) {
+        deltaNeutral++;
+        tieCount++;
+      } else if (diff <= 200) {
+        deltaModNearest++;
         nearestCheaperCount++;
         const savings = diff;
         if (savings > maxNearestSavings) maxNearestSavings = savings;
       } else {
-        tieCount++;
+        deltaSigNearest++;
+        nearestCheaperCount++;
+        const savings = diff;
+        if (savings > maxNearestSavings) maxNearestSavings = savings;
       }
+
+      // Settlement Density Tiers
+      const sCount = r.params.settlementCount;
+      const sTier = sCount <= 4 ? 'low' : sCount <= 8 ? 'med' : 'high';
+      densityStats[sTier].total++;
+      if (diff < 0) densityStats[sTier].catchmentWins++;
+      else if (diff > 0) densityStats[sTier].nearestWins++;
+      else densityStats[sTier].tieWins++;
+
+      // School Count Tiers
+      const schCount = r.params.schoolCount;
+      const schTier = schCount <= 2 ? 'few' : schCount <= 4 ? 'some' : 'many';
+      schoolStats[schTier].total++;
+      if (diff < 0) schoolStats[schTier].catchmentWins++;
+      else if (diff > 0) schoolStats[schTier].nearestWins++;
+      else schoolStats[schTier].tieWins++;
+
+      // Overlap Rules
+      const rule = r.params.overlapRule;
+      overlapStats[rule].total++;
+      if (diff < 0) overlapStats[rule].catchmentWins++;
+      else if (diff > 0) overlapStats[rule].nearestWins++;
+      else overlapStats[rule].tieWins++;
     });
+
+    const maxBucketCount = Math.max(
+      deltaSigCatchment,
+      deltaModCatchment,
+      deltaNeutral,
+      deltaModNearest,
+      deltaSigNearest,
+      1
+    );
 
     return {
       totalRuns,
@@ -82,67 +151,30 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
       tieCount,
       maxCatchmentSavings,
       maxNearestSavings,
+      histogram: {
+        deltaSigCatchment,
+        deltaModCatchment,
+        deltaNeutral,
+        deltaModNearest,
+        deltaSigNearest,
+        maxBucketCount,
+      },
+      densityStats,
+      schoolStats,
+      overlapStats,
     };
   }, [runs]);
 
-  // 2. Filter & Sort runs
-  const processedRuns = useMemo(() => {
-    let result = [...runs];
-
-    // Filter by search query
-    if (searchQuery.trim() !== '') {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (r) =>
-          r.runId.toString().includes(q) ||
-          r.params.settlementCount.toString().includes(q) ||
-          r.params.schoolCount.toString().includes(q)
-      );
-    }
-
-    // Filter by Winner
-    if (filterWinner !== 'all') {
-      result = result.filter((r) => {
-        const diff = r.metrics.deficit;
-        if (filterWinner === 'catchment') return diff < 0;
-        if (filterWinner === 'nearest') return diff > 0;
-        return diff === 0;
-      });
-    }
-
-    // Sort
-    result.sort((a, b) => {
-      let valA: number = 0;
-      let valB: number = 0;
-
-      if (sortField === 'runId') {
-        valA = a.runId;
-        valB = b.runId;
-      } else if (sortField === 'deficit') {
-        valA = a.metrics.deficit;
-        valB = b.metrics.deficit;
-      } else if (sortField === 'catchmentCost') {
-        valA = a.metrics.catchmentCost;
-        valB = b.metrics.catchmentCost;
-      } else if (sortField === 'nearestCost') {
-        valA = a.metrics.nearestCost;
-        valB = b.metrics.nearestCost;
-      }
-
-      if (valA < valB) return sortAsc ? -1 : 1;
-      if (valA > valB) return sortAsc ? 1 : -1;
-      return 0;
+  // Load a random scenario matching winner parameters
+  const handleLoadRandomWinner = (type: 'catchment' | 'nearest') => {
+    const matching = runs.filter((r) => {
+      const diff = r.metrics.deficit;
+      return type === 'catchment' ? diff < 0 : diff > 0;
     });
 
-    return result;
-  }, [runs, filterWinner, sortField, sortAsc, searchQuery]);
-
-  const handleSort = (field: 'runId' | 'deficit' | 'catchmentCost' | 'nearestCost') => {
-    if (sortField === field) {
-      setSortAsc(!sortAsc);
-    } else {
-      setSortField(field);
-      setSortAsc(true);
+    if (matching.length > 0) {
+      const randomRun = matching[Math.floor(Math.random() * matching.length)];
+      onLoadRun(randomRun);
     }
   };
 
@@ -160,7 +192,7 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
               <span className="text-indigo-400 text-lg">📊</span> Batch Simulation Report
             </h2>
             <p className="text-xs text-slate-405 mt-0.5">
-              Simulated {stats.totalRuns} runs with randomized settlement clusters, schools, overlap, and attractiveness sliders.
+              Simulated {stats.totalRuns} runs with randomized parameters. Analyzing spatial distributions.
             </p>
           </div>
           <button
@@ -206,7 +238,7 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
             {/* winner distribution card */}
             <div className="bg-slate-950/50 border border-slate-850 rounded-xl p-4 flex flex-col justify-between md:col-span-2">
               <div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Policy Winner Distribution</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Overall Policy Win Ratio</span>
                 <div className="mt-3">
                   {/* Distribution Bar */}
                   <div className="w-full h-3.5 bg-slate-900 rounded-full flex overflow-hidden border border-slate-850">
@@ -261,185 +293,291 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
                 </div>
               </div>
               <div className="pt-2 border-t border-slate-900 mt-2 text-[10px] text-slate-500 italic">
-                Reflects optimal localized fleet configurations.
+                Reflects optimal localized configurations.
               </div>
             </div>
 
           </div>
 
-          {/* 2. Fleet Deployments Average Bar Table */}
-          <div className="bg-slate-950/40 border border-slate-850 rounded-xl p-5 space-y-4">
-            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Average Active Fleet Deployments</h3>
+          {/* 2. Deficit Distribution Histogram Chart */}
+          <div className="bg-slate-950/40 border border-slate-850 rounded-xl p-5 space-y-5">
+            <div>
+              <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Cost Savings Margin Distribution</h3>
+              <p className="text-[11px] text-slate-505 mt-0.5">
+                Deficit delta breakdown (Catchment Cost − Nearest Cost). Left shows Catchment savings, right shows Nearest savings.
+              </p>
+            </div>
             
-            <div className="space-y-3">
-              {/* Coaches */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-slate-400 font-medium flex items-center gap-1">🚌 Coaches (Average)</span>
-                  <span className="text-slate-300 font-bold">Catchment: {stats.avgCatchmentCoaches} vs Nearest: {stats.avgNearestCoaches}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-indigo-500 h-full" style={{ width: `${Math.min(100, (stats.avgCatchmentCoaches / 10) * 100)}%` }} />
-                  </div>
-                  <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-emerald-500 h-full" style={{ width: `${Math.min(100, (stats.avgNearestCoaches / 10) * 100)}%` }} />
-                  </div>
-                </div>
+            <div className="flex flex-col md:flex-row items-end justify-between gap-6 h-60 pt-6 border-b border-slate-800 pb-2 px-4">
+              {/* Bucket 1: Significant Catchment Savings */}
+              <div className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                <span className="text-[10px] font-mono font-bold text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {stats.histogram.deltaSigCatchment} runs
+                </span>
+                <div
+                  className="w-full bg-indigo-600 rounded-t-lg transition-all duration-300 group-hover:bg-indigo-500"
+                  style={{ height: `${(stats.histogram.deltaSigCatchment / stats.histogram.maxBucketCount) * 80}%` }}
+                />
+                <span className="text-[9px] font-bold text-indigo-400/90 text-center uppercase tracking-wider block">
+                  Catchment &gt; £200
+                </span>
               </div>
 
-              {/* Minibuses */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-slate-400 font-medium flex items-center gap-1">🚐 Minibuses (Average)</span>
-                  <span className="text-slate-300 font-bold">Catchment: {stats.avgCatchmentMinibuses} vs Nearest: {stats.avgNearestMinibuses}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-indigo-500 h-full" style={{ width: `${Math.min(100, (stats.avgCatchmentMinibuses / 15) * 100)}%` }} />
-                  </div>
-                  <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-emerald-500 h-full" style={{ width: `${Math.min(100, (stats.avgNearestMinibuses / 15) * 100)}%` }} />
-                  </div>
-                </div>
+              {/* Bucket 2: Moderate Catchment Savings */}
+              <div className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                <span className="text-[10px] font-mono font-bold text-indigo-405 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {stats.histogram.deltaModCatchment} runs
+                </span>
+                <div
+                  className="w-full bg-indigo-500/70 rounded-t-lg transition-all duration-300 group-hover:bg-indigo-450"
+                  style={{ height: `${(stats.histogram.deltaModCatchment / stats.histogram.maxBucketCount) * 80}%` }}
+                />
+                <span className="text-[9px] font-bold text-indigo-305 text-center uppercase tracking-wider block">
+                  Catchment £50–£200
+                </span>
               </div>
 
-              {/* Taxis */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-slate-400 font-medium flex items-center gap-1">🚖 Taxis (Average)</span>
-                  <span className="text-slate-300 font-bold">Catchment: {stats.avgCatchmentTaxis} vs Nearest: {stats.avgNearestTaxis}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-indigo-500 h-full" style={{ width: `${Math.min(100, (stats.avgCatchmentTaxis / 20) * 100)}%` }} />
-                  </div>
-                  <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-emerald-500 h-full" style={{ width: `${Math.min(100, (stats.avgNearestTaxis / 20) * 100)}%` }} />
-                  </div>
-                </div>
+              {/* Bucket 3: Near Tie / Neutral */}
+              <div className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                <span className="text-[10px] font-mono font-bold text-slate-350 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {stats.histogram.deltaNeutral} runs
+                </span>
+                <div
+                  className="w-full bg-slate-700/80 rounded-t-lg transition-all duration-300 group-hover:bg-slate-600"
+                  style={{ height: `${(stats.histogram.deltaNeutral / stats.histogram.maxBucketCount) * 80}%` }}
+                />
+                <span className="text-[9px] font-bold text-slate-400 text-center uppercase tracking-wider block">
+                  Neutral ±£50
+                </span>
+              </div>
+
+              {/* Bucket 4: Moderate Nearest Savings */}
+              <div className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                <span className="text-[10px] font-mono font-bold text-emerald-405 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {stats.histogram.deltaModNearest} runs
+                </span>
+                <div
+                  className="w-full bg-emerald-500/70 rounded-t-lg transition-all duration-300 group-hover:bg-emerald-450"
+                  style={{ height: `${(stats.histogram.deltaModNearest / stats.histogram.maxBucketCount) * 80}%` }}
+                />
+                <span className="text-[9px] font-bold text-emerald-305 text-center uppercase tracking-wider block">
+                  Nearest £50–£200
+                </span>
+              </div>
+
+              {/* Bucket 5: Significant Nearest Savings */}
+              <div className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                <span className="text-[10px] font-mono font-bold text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {stats.histogram.deltaSigNearest} runs
+                </span>
+                <div
+                  className="w-full bg-emerald-600 rounded-t-lg transition-all duration-300 group-hover:bg-emerald-500"
+                  style={{ height: `${(stats.histogram.deltaSigNearest / stats.histogram.maxBucketCount) * 80}%` }}
+                />
+                <span className="text-[9px] font-bold text-emerald-400/90 text-center uppercase tracking-wider block">
+                  Nearest &gt; £200
+                </span>
               </div>
             </div>
           </div>
 
-          {/* 3. Table Filters & Search */}
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Runs Data Log ({processedRuns.length} Runs shown)</h3>
-              
-              <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-                {/* Search */}
-                <input
-                  type="text"
-                  placeholder="Search run, centers, schools..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-slate-950 text-xs text-slate-200 border border-slate-800 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500 transition-colors w-full sm:w-48"
-                />
+          {/* 3. Multi-Variable Influence Segmentation */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* 3.1. Settlement Density influence */}
+            <div className="bg-slate-950/40 border border-slate-850 rounded-xl p-5 space-y-4">
+              <div>
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Performance by Settlement Density</h4>
+                <p className="text-[10px] text-slate-500 mt-0.5">Correlation between settlement nodes count and policy winner.</p>
+              </div>
 
-                {/* Filter */}
-                <select
-                  value={filterWinner}
-                  onChange={(e) => setFilterWinner(e.target.value as any)}
-                  className="bg-slate-950 text-xs text-slate-200 border border-slate-800 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
-                >
-                  <option value="all">All Winners</option>
-                  <option value="catchment">Catchment Cheaper</option>
-                  <option value="nearest">Nearest Cheaper</option>
-                  <option value="tie">Neutral (Ties)</option>
-                </select>
+              <div className="space-y-4">
+                {Object.entries(stats.densityStats).map(([tier, data]) => {
+                  const label = tier === 'low' ? 'Low Density (1-4 clusters)' : tier === 'med' ? 'Medium Density (5-8 clusters)' : 'High Density (9-12 clusters)';
+                  const total = data.total || 1;
+                  const cPct = Math.round((data.catchmentWins / total) * 100);
+                  const tPct = Math.round((data.tieWins / total) * 100);
+                  const nPct = Math.round((data.nearestWins / total) * 100);
+
+                  return (
+                    <div key={tier} className="space-y-1.5">
+                      <div className="flex justify-between text-[11px] font-medium text-slate-400">
+                        <span>{label}</span>
+                        <span className="text-[10px] font-mono font-bold text-slate-450">({total} runs)</span>
+                      </div>
+                      <div className="w-full h-3 bg-slate-950 rounded-full flex overflow-hidden border border-slate-900">
+                        <div className="bg-indigo-600 h-full" style={{ width: `${cPct}%` }} title={`Catchment: ${cPct}%`} />
+                        <div className="bg-slate-700 h-full" style={{ width: `${tPct}%` }} title={`Tie: ${tPct}%`} />
+                        <div className="bg-emerald-600 h-full" style={{ width: `${nPct}%` }} title={`Nearest: ${nPct}%`} />
+                      </div>
+                      <div className="flex justify-between text-[9px] text-slate-500 font-bold px-1">
+                        <span className="text-indigo-400">Catchment: {cPct}%</span>
+                        <span className="text-slate-450">Ties: {tPct}%</span>
+                        <span className="text-emerald-400">Nearest: {nPct}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Table of Runs */}
-            <div className="border border-slate-850 rounded-xl overflow-hidden bg-slate-955">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-950 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-850 select-none">
-                    <th onClick={() => handleSort('runId')} className="p-3 cursor-pointer hover:bg-slate-900 transition-colors">
-                      Run ID {sortField === 'runId' && (sortAsc ? '▲' : '▼')}
-                    </th>
-                    <th className="p-3">Settlements</th>
-                    <th className="p-3">Schools</th>
-                    <th className="p-3">Students (Isolated)</th>
-                    <th onClick={() => handleSort('catchmentCost')} className="p-3 cursor-pointer hover:bg-slate-900 transition-colors">
-                      Catchment Cost {sortField === 'catchmentCost' && (sortAsc ? '▲' : '▼')}
-                    </th>
-                    <th onClick={() => handleSort('nearestCost')} className="p-3 cursor-pointer hover:bg-slate-900 transition-colors">
-                      Nearest Cost {sortField === 'nearestCost' && (sortAsc ? '▲' : '▼')}
-                    </th>
-                    <th onClick={() => handleSort('deficit')} className="p-3 cursor-pointer hover:bg-slate-900 transition-colors">
-                      Delta {sortField === 'deficit' && (sortAsc ? '▲' : '▼')}
-                    </th>
-                    <th className="p-3">Verdict</th>
-                    <th className="p-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-850 text-xs text-slate-300">
-                  {processedRuns.map((run) => {
-                    const diff = run.metrics.deficit;
-                    let verdictText = 'Neutral';
-                    let verdictClass = 'text-slate-400 bg-slate-900/60 border-slate-800';
-                    if (diff < 0) {
-                      verdictText = 'Catchment';
-                      verdictClass = 'text-indigo-400 bg-indigo-950/40 border-indigo-900/30';
-                    } else if (diff > 0) {
-                      verdictText = 'Nearest';
-                      verdictClass = 'text-emerald-400 bg-emerald-950/40 border-emerald-900/30';
-                    }
+            {/* 3.2. School Count influence */}
+            <div className="bg-slate-950/40 border border-slate-850 rounded-xl p-5 space-y-4">
+              <div>
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Performance by School Count</h4>
+                <p className="text-[10px] text-slate-500 mt-0.5">Correlation between number of schools and policy winner.</p>
+              </div>
 
-                    return (
-                      <tr key={run.runId} className="hover:bg-slate-900/30 transition-colors group">
-                        <td className="p-3 font-mono font-bold text-slate-400">#{run.runId}</td>
-                        <td className="p-3">{run.params.settlementCount}</td>
-                        <td className="p-3">{run.params.schoolCount}</td>
-                        <td className="p-3">
-                          {run.params.villageCount} <span className="text-[10px] text-slate-500">({run.params.isolatedPercentage}%)</span>
-                        </td>
-                        <td className="p-3 font-semibold text-slate-350">£{run.metrics.catchmentCost}</td>
-                        <td className="p-3 font-semibold text-slate-350">£{run.metrics.nearestCost}</td>
-                        <td className="p-3 font-bold font-mono">
-                          {diff < 0 ? (
-                            <span className="text-indigo-400">−£{Math.abs(diff)}</span>
-                          ) : diff > 0 ? (
-                            <span className="text-emerald-400">+£{diff}</span>
-                          ) : (
-                            <span className="text-slate-500">£0</span>
-                          )}
-                        </td>
-                        <td className="p-3">
-                          <span className={`px-2 py-0.5 border text-[9px] font-bold rounded-full ${verdictClass}`}>
-                            {verdictText}
-                          </span>
-                        </td>
-                        <td className="p-3 text-right">
-                          <button
-                            onClick={() => onLoadRun(run)}
-                            className="px-2.5 py-1 bg-slate-905 hover:bg-indigo-600 hover:text-white border border-slate-800 rounded-lg text-[10px] font-bold text-slate-300 transition-all opacity-80 group-hover:opacity-100 cursor-pointer"
-                          >
-                            {run.data ? 'Load to Map' : 'Load Sample'}
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {processedRuns.length === 0 && (
-                    <tr>
-                      <td colSpan={9} className="p-8 text-center text-slate-500 font-medium">
-                        No simulation runs matched your filters.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              <div className="space-y-4">
+                {Object.entries(stats.schoolStats).map(([tier, data]) => {
+                  const label = tier === 'few' ? '1–2 Schools (Small Fleet)' : tier === 'some' ? '3–4 Schools (Medium Fleet)' : '5–6 Schools (Large Fleet)';
+                  const total = data.total || 1;
+                  const cPct = Math.round((data.catchmentWins / total) * 100);
+                  const tPct = Math.round((data.tieWins / total) * 100);
+                  const nPct = Math.round((data.nearestWins / total) * 100);
+
+                  return (
+                    <div key={tier} className="space-y-1.5">
+                      <div className="flex justify-between text-[11px] font-medium text-slate-400">
+                        <span>{label}</span>
+                        <span className="text-[10px] font-mono font-bold text-slate-450">({total} runs)</span>
+                      </div>
+                      <div className="w-full h-3 bg-slate-950 rounded-full flex overflow-hidden border border-slate-900">
+                        <div className="bg-indigo-600 h-full" style={{ width: `${cPct}%` }} title={`Catchment: ${cPct}%`} />
+                        <div className="bg-slate-700 h-full" style={{ width: `${tPct}%` }} title={`Tie: ${tPct}%`} />
+                        <div className="bg-emerald-600 h-full" style={{ width: `${nPct}%` }} title={`Nearest: ${nPct}%`} />
+                      </div>
+                      <div className="flex justify-between text-[9px] text-slate-500 font-bold px-1">
+                        <span className="text-indigo-400">Catchment: {cPct}%</span>
+                        <span className="text-slate-450">Ties: {tPct}%</span>
+                        <span className="text-emerald-400">Nearest: {nPct}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
+
+            {/* 3.3. Overlap Allocation rule influence */}
+            <div className="bg-slate-950/40 border border-slate-850 rounded-xl p-5 space-y-4">
+              <div>
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Performance by Overlap Rule</h4>
+                <p className="text-[10px] text-slate-500 mt-0.5">Correlation between assignment rule type and policy winner.</p>
+              </div>
+
+              <div className="space-y-4">
+                {Object.entries(stats.overlapStats).map(([rule, data]) => {
+                  const label = rule === 'community' ? 'Community Unity Rule (Unified Villages)' : 'Legacy Preference Slider Split';
+                  const total = data.total || 1;
+                  const cPct = Math.round((data.catchmentWins / total) * 100);
+                  const tPct = Math.round((data.tieWins / total) * 100);
+                  const nPct = Math.round((data.nearestWins / total) * 100);
+
+                  return (
+                    <div key={rule} className="space-y-1.5">
+                      <div className="flex justify-between text-[11px] font-medium text-slate-400">
+                        <span>{label}</span>
+                        <span className="text-[10px] font-mono font-bold text-slate-450">({total} runs)</span>
+                      </div>
+                      <div className="w-full h-3 bg-slate-950 rounded-full flex overflow-hidden border border-slate-900">
+                        <div className="bg-indigo-600 h-full" style={{ width: `${cPct}%` }} title={`Catchment: ${cPct}%`} />
+                        <div className="bg-slate-700 h-full" style={{ width: `${tPct}%` }} title={`Tie: ${tPct}%`} />
+                        <div className="bg-emerald-600 h-full" style={{ width: `${nPct}%` }} title={`Nearest: ${nPct}%`} />
+                      </div>
+                      <div className="flex justify-between text-[9px] text-slate-500 font-bold px-1">
+                        <span className="text-indigo-400">Catchment: {cPct}%</span>
+                        <span className="text-slate-450">Ties: {tPct}%</span>
+                        <span className="text-emerald-400">Nearest: {nPct}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 3.4. Fleet Deployments Average Bar Table */}
+            <div className="bg-slate-950/40 border border-slate-850 rounded-xl p-5 space-y-4">
+              <div>
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Average Fleet Deployments</h4>
+                <p className="text-[10px] text-slate-500 mt-0.5">Average active transport fleet size comparison.</p>
+              </div>
+
+              <div className="space-y-3">
+                {/* Coaches */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10.5px]">
+                    <span className="text-slate-400 font-medium">🚌 Coaches (Average)</span>
+                    <span className="text-slate-300 font-bold">Catchment: {stats.avgCatchmentCoaches} vs Nearest: {stats.avgNearestCoaches}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-indigo-500 h-full" style={{ width: `${Math.min(100, (stats.avgCatchmentCoaches / 10) * 100)}%` }} />
+                    </div>
+                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-emerald-500 h-full" style={{ width: `${Math.min(100, (stats.avgNearestCoaches / 10) * 100)}%` }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Minibuses */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10.5px]">
+                    <span className="text-slate-400 font-medium">🚐 Minibuses (Average)</span>
+                    <span className="text-slate-300 font-bold">Catchment: {stats.avgCatchmentMinibuses} vs Nearest: {stats.avgNearestMinibuses}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-indigo-500 h-full" style={{ width: `${Math.min(100, (stats.avgCatchmentMinibuses / 15) * 100)}%` }} />
+                    </div>
+                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-emerald-500 h-full" style={{ width: `${Math.min(100, (stats.avgNearestMinibuses / 15) * 100)}%` }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Taxis */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10.5px]">
+                    <span className="text-slate-400 font-medium">🚖 Taxis (Average)</span>
+                    <span className="text-slate-300 font-bold">Catchment: {stats.avgCatchmentTaxis} vs Nearest: {stats.avgNearestTaxis}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-indigo-500 h-full" style={{ width: `${Math.min(100, (stats.avgCatchmentTaxis / 20) * 100)}%` }} />
+                    </div>
+                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-emerald-500 h-full" style={{ width: `${Math.min(100, (stats.avgNearestTaxis / 20) * 100)}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
 
         </div>
         
-        {/* Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/20 text-center text-[10px] text-slate-500">
-          Click "Load to Map" or "Load Sample" on any row to close this modal and inject a scenario directly onto the spatial editor.
+        {/* Footer with Scenario Injector Actions */}
+        <div className="p-4 border-t border-slate-800 bg-slate-950/40 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <span className="text-[10px] text-slate-500">
+            Want to visualize the layouts? Load a random scenario winner directly:
+          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => handleLoadRandomWinner('catchment')}
+              disabled={stats.catchmentCheaperCount === 0}
+              className="px-3.5 py-1.5 bg-indigo-950/40 hover:bg-indigo-650/40 disabled:bg-slate-900 border border-indigo-900/40 disabled:border-slate-800 rounded-lg text-xs font-bold text-indigo-400 disabled:text-slate-600 transition-all cursor-pointer"
+            >
+              🎲 Load Random Catchment Winner
+            </button>
+            <button
+              onClick={() => handleLoadRandomWinner('nearest')}
+              disabled={stats.nearestCheaperCount === 0}
+              className="px-3.5 py-1.5 bg-emerald-950/40 hover:bg-emerald-650/40 disabled:bg-slate-900 border border-emerald-900/40 disabled:border-slate-800 rounded-lg text-xs font-bold text-emerald-400 disabled:text-slate-600 transition-all cursor-pointer"
+            >
+              🎲 Load Random Nearest Winner
+            </button>
+          </div>
         </div>
 
       </div>
