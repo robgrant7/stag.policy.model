@@ -589,7 +589,7 @@ export function mergePolygons(polys: Point[][]): Point[][] {
     }
   });
 
-  const ptsEqual = (a: Point, b: Point) => Math.abs(a.x - b.x) < 0.1 && Math.abs(a.y - b.y) < 0.1;
+  const ptsEqual = (a: Point, b: Point) => Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5;
 
   const boundaryEdges = edges.filter((e1) => {
     const isShared = edges.some((e2) => ptsEqual(e1.p1, e2.p2) && ptsEqual(e1.p2, e2.p1));
@@ -944,10 +944,10 @@ export function generateScenario(params: ScenarioParams): {
     return poly.map((p) => {
       let x = p.x;
       let y = p.y;
-      if (minX <= 30.0 && x <= 30.0) x = 0;
-      if (maxX >= 70.0 && x >= 70.0) x = 100;
-      if (minY <= 30.0 && y <= 30.0) y = 0;
-      if (maxY >= 70.0 && y >= 70.0) y = 100;
+      if (minX <= 35.0 && x <= 35.0) x = 0;
+      if (maxX >= 65.0 && x >= 65.0) x = 100;
+      if (minY <= 35.0 && y <= 35.0) y = 0;
+      if (maxY >= 65.0 && y >= 65.0) y = 100;
       return { x, y };
     });
   }
