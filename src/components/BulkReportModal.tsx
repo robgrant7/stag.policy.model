@@ -207,7 +207,7 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           
           {/* 1. Summary Cards Row */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             
             {/* cost comparison card */}
             <div className="bg-[#1a1a1a] border border-[#333333] rounded-xl p-4 flex flex-col justify-between">
@@ -274,26 +274,6 @@ export const BulkReportModal: React.FC<BulkReportModalProps> = ({
                   <span className="block font-medium text-slate-500">Nearest wins</span>
                   <span className="text-xs font-bold text-protest-green">{stats.pctNearestCheaper}% ({stats.nearestCheaperCount})</span>
                 </div>
-              </div>
-            </div>
-
-            {/* peak savings card */}
-            <div className="bg-[#1a1a1a] border border-[#333333] rounded-xl p-4 flex flex-col justify-between">
-              <div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Peak Savings Detected</span>
-                <div className="mt-2 space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate-405 font-medium">Catchment Peak:</span>
-                    <span className="text-xs font-bold text-protest-blue">£{stats.maxCatchmentSavings}/day</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate-405 font-medium">Nearest Peak:</span>
-                    <span className="text-xs font-bold text-protest-green">£{stats.maxNearestSavings}/day</span>
-                  </div>
-                </div>
-              </div>
-              <div className="pt-2 border-t border-[#333333] mt-2 text-[10px] text-slate-500 italic">
-                Reflects optimal localized configurations.
               </div>
             </div>
 
