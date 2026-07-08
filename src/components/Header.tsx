@@ -37,7 +37,26 @@ export const Header: React.FC = () => {
           </div>
         </div>
         
-        <div className="flex items-center gap-2 self-start md:self-auto">
+        <div className="flex items-center gap-3 self-start md:self-auto">
+          <a
+            href="https://schooltransportactiongroup.org.uk/"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:scale-[0.98] text-slate-200 hover:text-white border border-slate-700 transition-all duration-150 cursor-pointer"
+          >
+            <svg
+              className="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+            return to STAG main site
+          </a>
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
             Phase 1: Scenario Builder Active
