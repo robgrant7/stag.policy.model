@@ -35,7 +35,7 @@ export interface School {
 
 export interface ScenarioParams {
   settlementCount: number; // 1, 2, or 3
-  schoolCount: number;     // 1 to 6
+  schoolCount: number;     // 1 to 3
   villageCount: number;    // default 40
   isolatedCount: number;   // default 10
   isolatedPercentage?: number; // default 15%

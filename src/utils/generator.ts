@@ -1478,7 +1478,7 @@ export function runBulkSimulation(
   for (let i = 0; i < count; i++) {
     // 1. Randomize parameters
     const settlementCount = Math.floor(Math.random() * 12) + 1; // 1 to 12
-    const schoolCount = Math.floor(Math.random() * 6) + 1; // 1 to 6
+    const schoolCount = Math.floor(Math.random() * 3) + 1; // 1 to 3
     const villageCount = Math.floor(Math.random() * 201) + 50; // 50 to 250
     const isolatedPercentage = [5, 10, 15, 20, 25, 30][Math.floor(Math.random() * 6)];
     
@@ -1489,7 +1489,7 @@ export function runBulkSimulation(
     const overlapRule = Math.random() < 0.5 ? 'community' : 'legacy_slider';
     
     // Attractiveness: random for each school from -2.0 to 2.0 (step 0.5)
-    const SCHOOL_IDS = ['school-a', 'school-b', 'school-c', 'school-d', 'school-e', 'school-f'];
+    const SCHOOL_IDS = ['school-a', 'school-b', 'school-c'];
     const attractiveness: Record<string, number> = {};
     SCHOOL_IDS.forEach((id) => {
       attractiveness[id] = Math.round((-2.0 + Math.random() * 4.0) * 2) / 2; // -2.0 to 2.0 in steps of 0.5
