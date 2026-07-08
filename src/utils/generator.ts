@@ -152,7 +152,7 @@ export function generateSettlementCenters(count: number): SettlementCenter[] {
     let bestX = 250;
     let bestY = 250;
 
-    for (let attempts = 0; attempts < 100; attempts++) {
+    for (let attempts = 0; attempts < 5000; attempts++) {
       // Wide range: X in [25, 475], Y in [50, 450]
       const x = 25 + Math.random() * 450;
       const y = 50 + Math.random() * 400;
@@ -1147,20 +1147,23 @@ export function calculateFinancials(
     });
 
     sortedSchools.forEach((s) => {
-      const cohortCounts = schoolCohortCounts[s.id] || {};
-      const totalStudents = Object.values(cohortCounts).reduce((a, b) => a + b, 0);
+      const cohortCounts = { ...(schoolCohortCounts[s.id] || {}) };
+      const isolatedCount = cohortCounts.isolated || 0;
+      delete cohortCounts.isolated;
 
-      if (totalStudents === 0) return;
+      const totalVillageStudents = Object.values(cohortCounts).reduce((a, b) => a + b, 0);
 
-      // 1. Pack into Coaches (Global pooling)
+      if (totalVillageStudents === 0 && isolatedCount === 0) return;
+
+      // 1. Pack Village students into Coaches (Global pooling)
       let numCoaches = 0;
-      let rem = totalStudents;
-      if (totalStudents >= coachThreshold) {
-        numCoaches = Math.floor(totalStudents / coachCapacity);
-        rem = totalStudents - numCoaches * coachCapacity;
+      let rem = totalVillageStudents;
+      if (totalVillageStudents >= coachThreshold) {
+        numCoaches = Math.floor(totalVillageStudents / coachCapacity);
+        rem = totalVillageStudents - numCoaches * coachCapacity;
       }
 
-      // 2. Pack into Minibuses (Global pooling)
+      // 2. Pack Village residuals into Minibuses (Global pooling)
       let numMinibuses = 0;
       if (rem >= minibusThreshold) {
         numMinibuses = Math.floor(rem / minibusCapacity);
@@ -1176,8 +1179,8 @@ export function calculateFinancials(
       minibusesCount += numMinibuses;
       totalCost += numCoaches * coachCost + numMinibuses * minibusCost;
 
-      // 3. Pack residuals into localized point-to-point Taxis
-      const globalSeatsAvailable = totalStudents - rem;
+      // 3. Pack Village residuals into localized point-to-point Taxis
+      const globalSeatsAvailable = totalVillageStudents - rem;
       let seatsRemaining = globalSeatsAvailable;
 
       const sortedCohortIds = Object.keys(cohortCounts).sort();
@@ -1193,6 +1196,13 @@ export function calculateFinancials(
           totalCost += taxisNeeded * taxiCost;
         }
       });
+
+      // 4. Pack Isolated students into shared taxis (capacity 2)
+      if (isolatedCount > 0) {
+        const isolatedTaxisNeeded = Math.ceil(isolatedCount / taxiCapacity);
+        taxisCount += isolatedTaxisNeeded;
+        totalCost += isolatedTaxisNeeded * taxiCost;
+      }
     });
 
     return { totalCost, coachesCount, minibusesCount, taxisCount };
