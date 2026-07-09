@@ -376,7 +376,13 @@ function App() {
             Home to School Transport Policy Audit & Spatial Simulator
           </div>
         </div>
-        <div>
+        <div className="flex gap-[10px] items-center">
+          <a
+            href="https://schooltransportactiongroup.org.uk/"
+            className="px-[10px] py-[4px] bg-protest-green hover:bg-protest-green/90 active:scale-[0.98] text-black font-heading text-[1.1rem] font-bold tracking-[1px] uppercase rounded-[2px] transition-all duration-150 cursor-pointer inline-flex items-center no-underline"
+          >
+            Return to STAG main site
+          </a>
           <button
             onClick={() => setIsHowItWorksOpen(true)}
             className="px-[10px] py-[4px] bg-protest-pink hover:bg-protest-pink/90 active:scale-[0.98] text-black font-heading text-[1.1rem] font-bold tracking-[1px] uppercase rounded-[2px] transition-all duration-150 cursor-pointer"
